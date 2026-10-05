@@ -930,7 +930,7 @@ void menu_about(){
 
 			tft.canvas(0, 80, TFT_WIDTH, 30);
 			tft.set_background(COLOR_BACKGROUND);
-			tft_string.set(FIRMWARE_VER);
+			tft_string.set(FIRMWARE_PORT " / " FIRMWARE_AUTHOR);
 			tft_string.trim();
 			tft.add_text(tft_string.center(TFT_WIDTH),5,COLOR_MENU_TEXT,tft_string);
 			
@@ -943,12 +943,6 @@ void menu_about(){
 			tft.canvas(0, 160, TFT_WIDTH, 30);
 			tft.set_background(COLOR_BACKGROUND);
 			tft_string.set(TECH_SUPPORT);
-			tft_string.trim();
-			tft.add_text(tft_string.center(TFT_WIDTH),5,COLOR_MENU_TEXT,tft_string);
-
-			tft.canvas(0, 200, TFT_WIDTH, 30);
-			tft.set_background(COLOR_BACKGROUND);
-			tft_string.set(FIRMWARE_PORT " / " FIRMWARE_AUTHOR);
 			tft_string.trim();
 			tft.add_text(tft_string.center(TFT_WIDTH),5,COLOR_MENU_TEXT,tft_string);
 			//ui.refresh(LCDVIEW_CALL_REDRAW_NEXT);

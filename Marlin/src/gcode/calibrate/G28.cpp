@@ -258,6 +258,9 @@ void GcodeSuite::G28() {
 
   TERN_(HAS_DWIN_E3V2_BASIC, DWIN_HomingStart());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingStart());
+  #if HAS_MARLINUI_MENU
+    LCD_MESSAGE(MSG_HOMING_START);
+  #endif
 
   planner.synchronize();          // Wait for planner moves to finish!
 
@@ -631,6 +634,9 @@ void GcodeSuite::G28() {
 
   TERN_(HAS_DWIN_E3V2_BASIC, DWIN_HomingDone());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingDone());
+  #if HAS_MARLINUI_MENU
+    LCD_MESSAGE(MSG_HOMING_DONE);
+  #endif
 
   report_current_position();
 
