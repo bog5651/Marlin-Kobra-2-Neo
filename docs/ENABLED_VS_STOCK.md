@@ -37,6 +37,18 @@
 | `HOST_PROMPT_SUPPORT` | интерактивные промпты хосту (подтверждения, «продолжить») | включён под `HOST_ACTION_COMMANDS`; у завода выключен |
 | `MEATPACK_ON_SERIAL_PORT_1` | сжатие протокола OctoPrint MeatPack на основном serial | у завода выключен; включён конфиг-коммитом порта. Без плагина обычный текстовый G-код работает как раньше |
 | `PROBING_PART_COOLING_FAN` | новая опция порта: остановка/перезапуск part-fan вокруг точек проб | по умолчанию **включена** — повторяет заводское поведение (у завода вызовы безусловные); можно выключить |
+| `PID_EDIT_MENU` | правка PID (`M301`/`M304`) в «Advanced Settings» | завод выключил; сами команды были и у завода |
+| `PID_AUTOTUNE_MENU` | запуск автотюна PID (`M303`) из «Advanced Settings» | завод выключил; `M303` был и у завода |
+
+### Восстановленные пункты меню (завод держал их закомментированными)
+
+| Пункт | Где | Что даёт |
+|---|---|---|
+| Store / Load Settings | More Config | `M500`/`M501` из экрана |
+| Power Outage | More Config | тумблер Power-Loss Recovery (`M413`) |
+| Preheat PLA / ABS | More Config | редактор пресетов (пишется в EEPROM) |
+| Advanced Settings | More Config | дерево настроек Marlin: steps/mm, ускорения, PID, LA и т.д. |
+| Mesh Viewer | More Config | **новый** экран порта: heatmap сетки 7×7 (BILINEAR) |
 
 ## 3. Что НЕ является дополнительно включённой фичей
 

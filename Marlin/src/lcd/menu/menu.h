@@ -291,6 +291,9 @@ void tft_set_speed();
 void tft_setTargetHotend();
 void tft_setTargetBed();
 void menu_about();
+#if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+  void menu_mesh_view();
+#endif
 void filament_change();
 void lcd_level_top_windown();
 void preheat_to_move_E();

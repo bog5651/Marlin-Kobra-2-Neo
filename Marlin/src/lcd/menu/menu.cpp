@@ -959,6 +959,63 @@ void menu_about(){
 
 }
 
+#if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+void menu_mesh_view() {
+  ui.defer_status_screen();
+  if (ui.should_draw()) {
+    constexpr uint8_t cell = 26;
+    constexpr int16_t gx = (TFT_WIDTH - (GRID_MAX_POINTS_X) * cell) / 2,
+                      gy = 30;
+    tft.canvas(0, 4, TFT_WIDTH, 24);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT_F(MSG_MESH_VIEWER));
+    tft_string.trim();
+    tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_MENU_TEXT, tft_string);
+
+    if (!bedlevel.mesh_is_valid()) {
+      tft.canvas(0, gy + 70, TFT_WIDTH, 24);
+      tft.set_background(COLOR_BACKGROUND);
+      tft_string.set(GET_TEXT_F(MSG_NO_VALID_MESH));
+      tft_string.trim();
+      tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_MENU_VALUE, tft_string);
+    }
+    else {
+      float zmin = 0, zmax = 0;
+      for (uint8_t x = 0; x < GRID_MAX_POINTS_X; ++x)
+        for (uint8_t y = 0; y < GRID_MAX_POINTS_Y; ++y) {
+          const float z = bedlevel.z_values[x][y];
+          if (!isnan(z)) { if (z < zmin) zmin = z; if (z > zmax) zmax = z; }
+        }
+
+      tft.canvas(gx, gy, (GRID_MAX_POINTS_X) * cell + 1, (GRID_MAX_POINTS_Y) * cell + 1);
+      tft.set_background(COLOR_BACKGROUND);
+      const float span = _MAX(0.1f, _MAX(fabs(zmin), fabs(zmax)));
+      for (uint8_t x = 0; x < GRID_MAX_POINTS_X; ++x)
+        for (uint8_t y = 0; y < GRID_MAX_POINTS_Y; ++y) {
+          const float z = bedlevel.z_values[x][y];
+          uint16_t color = COLOR_GREY;
+          if (!isnan(z)) {
+            const float t = z / span;
+            color = t <= -0.5f ? COLOR_BLUE : t <= -0.15f ? COLOR_AQUA : t < 0.15f ? COLOR_LIME : t < 0.5f ? COLOR_YELLOW : COLOR_RED;
+          }
+          tft.add_bar(x * cell + 1, ((GRID_MAX_POINTS_Y) - 1 - y) * cell + 1, cell - 2, cell - 2, color);
+        }
+      tft.add_rectangle(0, 0, (GRID_MAX_POINTS_X) * cell + 1, (GRID_MAX_POINTS_Y) * cell + 1, COLOR_WHITE);
+
+      tft.canvas(0, gy + (GRID_MAX_POINTS_Y) * cell + 6, TFT_WIDTH, 20);
+      tft.set_background(COLOR_BACKGROUND);
+      tft_string.set(F("min "));
+      tft_string.add(ftostr43sign(zmin));
+      tft_string.add(F("  max "));
+      tft_string.add(ftostr43sign(zmax));
+      tft_string.trim();
+      tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_MENU_VALUE, tft_string);
+    }
+  }
+  if (ui.use_click()) ui.goto_previous_screen();
+}
+#endif
+
 void sd_card_removed(){
 
   if(ui.use_click()){

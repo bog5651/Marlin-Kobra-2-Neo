@@ -589,26 +589,30 @@ void menu_configuration() {
 
    SUBMENU(MSG_ABOUT, menu_about);
 
-//  #if ENABLED(POWER_LOSS_RECOVERY)
-//    EDIT_ITEM(bool, MSG_OUTAGE_RECOVERY, &recovery.enabled, recovery.changed);
-//  #endif
+  #if ENABLED(POWER_LOSS_RECOVERY)
+    EDIT_ITEM(bool, MSG_OUTAGE_RECOVERY, &recovery.enabled, recovery.changed);
+  #endif
 
-  // // Preheat configurations
-  // #if HAS_PREHEAT && DISABLED(SLIM_LCD_MENUS)
-  //   LOOP_L_N(m, PREHEAT_COUNT)
-  //    SUBMENU_N_f(m, ui.get_preheat_label(m), MSG_PREHEAT_M_SETTINGS, _menu_configuration_preheat_settings);
-  // #endif
+  // Preheat configurations
+  #if HAS_PREHEAT && DISABLED(SLIM_LCD_MENUS)
+    for (uint8_t m = 0; m < PREHEAT_COUNT; ++m)
+      SUBMENU_N_f(m, ui.get_preheat_label(m), MSG_PREHEAT_M_SETTINGS, _menu_configuration_preheat_settings);
+  #endif
 
   #if ENABLED(SOUND_MENU_ITEM)
     EDIT_ITEM(bool, MSG_SOUND, &ui.sound_on, []{ ui.chirp(); });
   #endif
 
   #if ENABLED(EEPROM_SETTINGS)
-    // ACTION_ITEM(MSG_STORE_EEPROM, ui.store_settings);
-    // if (!busy) ACTION_ITEM(MSG_LOAD_EEPROM, ui.load_settings);
+    ACTION_ITEM(MSG_STORE_EEPROM, ui.store_settings);
+    if (!busy) ACTION_ITEM(MSG_LOAD_EEPROM, ui.load_settings);
+  #endif
+
+  #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+    SUBMENU(MSG_MESH_VIEWER, menu_mesh_view);
   #endif
   
-  //SUBMENU(MSG_ADVANCED_SETTINGS, menu_advanced_settings);
+  SUBMENU(MSG_ADVANCED_SETTINGS, menu_advanced_settings);
 
    SUBMENU(MSG_RESTORE_DEFAULTS, Reset_setting);
 //  if (!busy) SUBMENU(MSG_RESTORE_DEFAULTS, []{
