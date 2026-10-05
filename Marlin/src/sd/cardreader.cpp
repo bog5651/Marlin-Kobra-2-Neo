@@ -498,11 +498,12 @@ void CardReader::manage_media() {
   flag.workDirIsRoot = true;        // Return to root on mount/release/init
 
   const uint8_t old_stat = prev_stat;
+  hal.watchdog_refresh();           // The settle delay may be long on slow cards
+  safe_delay(500);                  // Some boards need a delay to get settled
+  stat = uint8_t(IS_SD_INSERTED()); // Re-check after the delay
   prev_stat = stat;                 // Change now to prevent re-entry in safe_delay
 
   if (stat) {                       // Media Inserted
-    safe_delay(500);                // Some boards need a delay to get settled
-
     // Try to mount the media (only later with SD_IGNORE_AT_STARTUP)
     if (TERN1(SD_IGNORE_AT_STARTUP, old_stat != 2)) mount();
     if (!isMounted()) stat = 0;     // Not mounted?
@@ -549,6 +550,8 @@ void CardReader::release() {
   else
     endFilePrintNow();
 
+  wait_for_user = wait_for_heatup = false; // Cancel any pending wait
+
   flag.mounted = false;
   flag.workDirIsRoot = true;
   nrItems = -1;
@@ -590,6 +593,7 @@ void CardReader::endFilePrintNow(TERN_(SD_RESORT, const bool re_sort/*=false*/))
   TERN_(ADVANCED_PAUSE_FEATURE, did_pause_print = 0);
   TERN_(DWIN_CREALITY_LCD, HMI_flag.print_finish = flag.sdprinting);
   flag.abort_sd_printing = false;
+  wait_for_user = wait_for_heatup = false; // Don't keep waiting after the card is gone
   if (isFileOpen()) file.close();
   TERN_(SD_RESORT, if (re_sort) presort());
 }
