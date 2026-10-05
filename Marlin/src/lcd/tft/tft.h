@@ -57,7 +57,7 @@
   #ifdef STM32F103xB
     #define TFT_BUFFER_WORDS      1024
   #elif defined(STM32F103xE)
-    #define TFT_BUFFER_WORDS      19200 // 320 * 60
+    #define TFT_BUFFER_WORDS      8000  // 320 * 25 (stock value, was 19200: exceeds 64K RAM)
   #elif defined(STM32F1)
     #define TFT_BUFFER_WORDS      8192
   #else
