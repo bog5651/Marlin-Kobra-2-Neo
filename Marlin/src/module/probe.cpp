@@ -639,16 +639,22 @@ bool Probe::probe_down_to_z(const_float_t z, const_feedRate_t fr_mm_s) {
       // cannot interrupt (and stall) the blocking moves.
       autoProbe.enable_calibration_module = false;
       autoProbe.enable_probe_swtich = true;
-      // Coarse approach
-      while (current_position.z > z && READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_INVERTING)
-        do_blocking_move_to_z(_MAX(current_position.z - 0.4f, z), fr_mm_s);
+      SERIAL_ECHOLNPGM("pd pre z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
+      // Coarse approach (bounded)
+      for (uint8_t i = 0; i < 200 && current_position.z > z && READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_INVERTING; ++i) {
+        const float next = _MAX(current_position.z - 0.4f, z);
+        SERIAL_ECHOLNPGM("pd step to=", next);
+        do_blocking_move_to_z(next, fr_mm_s);
+        SERIAL_ECHOLNPGM("pd stepped z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
+      }
       // Back off and fine approach for a precise trigger point
       if (READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_INVERTING) {
         do_blocking_move_to_z(current_position.z + 0.4f, fr_mm_s);
-        while (current_position.z > z && READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_INVERTING)
+        for (uint8_t i = 0; i < 50 && current_position.z > z && READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_INVERTING; ++i)
           do_blocking_move_to_z(_MAX(current_position.z - 0.05f, z), fr_mm_s);
       }
       autoProbe.enable_calibration_module = true;
+      SERIAL_ECHOLNPGM("pd post z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
     }
     else
   #endif
