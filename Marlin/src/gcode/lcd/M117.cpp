@@ -36,7 +36,6 @@ void GcodeSuite::M117() {
     ui.set_status_no_expire(parser.string_arg);
   else
     ui.reset_status();
-
 }
 
 #endif // HAS_STATUS_MESSAGE
