@@ -87,7 +87,6 @@ void TFT_IO::InitTFT() {
   #if TFT_DRIVER != AUTO
     lcd_id = TFT_DRIVER;
   #endif
-
   #if TFT_DRIVER == ST7735
     write_esc_sequence(st7735_init);
   #elif TFT_DRIVER == SSD1963
