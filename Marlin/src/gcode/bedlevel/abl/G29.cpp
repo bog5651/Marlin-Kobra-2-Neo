@@ -33,6 +33,7 @@
 #include "../../../module/motion.h"
 #include "../../../module/planner.h"
 #include "../../../module/probe.h"
+#include "../../../module/temperature.h"
 #include "../../queue.h"
 
 #if ENABLED(AUTO_BED_LEVELING_LINEAR)
@@ -943,7 +944,10 @@ G29_TYPE GcodeSuite::G29() {
   #ifdef Z_PROBE_END_SCRIPT
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Z Probe End Script: ", Z_PROBE_END_SCRIPT);
     planner.synchronize();
+    process_subcommands_now(F("M500"));           // stock: persist the leveling mesh
     process_subcommands_now(F(Z_PROBE_END_SCRIPT));
+    thermalManager.setTargetHotend(0, 0);         // stock: cool down after auto-level
+    TERN_(HAS_HEATED_BED, thermalManager.setTargetBed(0));
   #endif
 
   TERN_(HAS_MULTI_HOTEND, if (abl.tool_index != 0) tool_change(abl.tool_index));
