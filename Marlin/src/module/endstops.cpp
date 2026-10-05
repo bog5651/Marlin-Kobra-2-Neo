@@ -790,7 +790,11 @@ void Endstops::update() {
       else {
         // Z+ : Gantry up, bed down
         #if HAS_Z_MAX_STATE
-          PROCESS_ENDSTOP_Z(MAX);
+          #if ENABLED(LEVEING_CALIBRATION_MODULE)
+            // Stock: never abort Z+ moves on the module switch (Z_MAX is the module switch)
+          #else
+            PROCESS_ENDSTOP_Z(MAX);
+          #endif
           #if   CORE_DIAG(XZ, X, MIN)
             PROCESS_CORE_ENDSTOP(X,MIN,Z,MAX);
           #elif CORE_DIAG(XZ, X, MAX)

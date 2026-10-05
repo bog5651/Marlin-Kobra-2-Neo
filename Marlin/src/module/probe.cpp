@@ -613,27 +613,7 @@ bool Probe::probe_down_to_z(const float z, const feedRate_t fr_mm_s) {
   TERN_(HAS_QUIET_PROBING, set_devices_paused_for_probing(true));
 
   // Move down until the probe is triggered
-  #if ENABLED(LEVEING_CALIBRATION_MODULE)
-    if (autoProbe.enable_calibration_module) {
-      // Stock calibration module: step down and read the switch directly.
-      // The module flag is masked during each step so the endstop abort
-      // cannot interrupt (and stall) the blocking moves.
-      autoProbe.enable_calibration_module = false;
-      autoProbe.enable_probe_swtich = true;
-      // Coarse approach
-      while (motion.position.z > z && READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_HIT_STATE)
-        motion.blocking_move_z(_MAX(motion.position.z - 0.4f, z), fr_mm_s);
-      // Back off and fine approach for a precise trigger point
-      if (READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_HIT_STATE) {
-        motion.blocking_move_z(motion.position.z + 0.4f, fr_mm_s);
-        while (motion.position.z > z && READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_HIT_STATE)
-          motion.blocking_move_z(_MAX(motion.position.z - 0.05f, z), fr_mm_s);
-      }
-      autoProbe.enable_calibration_module = true;
-    }
-    else
-  #endif
-      motion.blocking_move_z(z, fr_mm_s);
+  motion.blocking_move_z(z, fr_mm_s);
 
   // Check to see if the probe was triggered
   const bool probe_triggered = (
@@ -641,9 +621,6 @@ bool Probe::probe_down_to_z(const float z, const feedRate_t fr_mm_s) {
       PROBE_TRIGGERED()
     #else
       TEST(endstops.trigger_state(), Z_MIN_PROBE) || (endstops.trigger_state() & (_BV(Z_MAX)))
-      #if ENABLED(LEVEING_CALIBRATION_MODULE)
-        || (autoProbe.enable_calibration_module && READ(Z_MAX_PIN) == Z_MAX_ENDSTOP_HIT_STATE)
-      #endif
     #endif
   );
 
