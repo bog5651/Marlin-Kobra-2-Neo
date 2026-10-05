@@ -32,6 +32,10 @@
 
 #include "../../MarlinCore.h"
 
+#if ENABLED(LIN_ADVANCE)
+  #include "../../module/planner.h"
+#endif
+
 #if HAS_MULTI_LANGUAGE
   void menu_language();
 #endif
@@ -65,6 +69,9 @@
 #define HAS_DEBUG_MENU ENABLED(LCD_PROGRESS_BAR_TEST)
 
 void menu_advanced_settings();
+#if ENABLED(SHAPING_MENU)
+  void menu_advanced_input_shaping();
+#endif
 #if ANY(DELTA_CALIBRATION_MENU, DELTA_AUTO_CALIBRATION)
   void menu_delta_calibrate();
 #endif
@@ -612,6 +619,14 @@ void menu_configuration() {
     SUBMENU(MSG_MESH_VIEWER, menu_mesh_view);
   #endif
   
+  #if ENABLED(SHAPING_MENU)
+    if (!busy) SUBMENU(MSG_INPUT_SHAPING, menu_advanced_input_shaping);
+  #endif
+
+  #if ENABLED(LIN_ADVANCE)
+    EDIT_ITEM(float42_52, MSG_ADVANCE_K, &planner.extruder_advance_K[0], 0, 10);
+  #endif
+
   SUBMENU(MSG_ADVANCED_SETTINGS, menu_advanced_settings);
 
    SUBMENU(MSG_RESTORE_DEFAULTS, Reset_setting);
