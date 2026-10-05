@@ -592,6 +592,7 @@
 // Custom board
 //
 
+#define BOARD_AC_TRI_F103RE          6203  // Anycubic Trigorilla V4 (STM32F103RE / GD32F303)
 #define BOARD_CUSTOM                  9998  // Custom pins definition for development and/or rare boards
 
 //
