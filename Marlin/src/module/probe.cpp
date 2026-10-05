@@ -518,6 +518,10 @@ bool Probe::set_deployed(const bool deploy) {
     DEBUG_ECHOLNPGM("deploy: ", deploy);
   }
 
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    SERIAL_ECHOLNPGM("deploy set=", int(deploy), " z=", current_position.z, " pen=", int(endstops.z_probe_enabled));
+  #endif
+
   if (endstops.z_probe_enabled == deploy) return false;
 
   // Make room for probe to deploy (or stow)
@@ -531,6 +535,10 @@ bool Probe::set_deployed(const bool deploy) {
 
   if (z_raise_wanted)
     do_z_raise(_MAX(Z_CLEARANCE_BETWEEN_PROBES, Z_CLEARANCE_DEPLOY_PROBE));
+
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    SERIAL_ECHOLNPGM("deploy raised z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
+  #endif
 
   #if ANY(Z_PROBE_SLED, Z_PROBE_ALLEN_KEY)
     if (homing_needed_error(TERN_(Z_PROBE_SLED, _BV(X_AXIS)))) {
@@ -591,6 +599,10 @@ bool Probe::set_deployed(const bool deploy) {
  */
 bool Probe::probe_down_to_z(const_float_t z, const_feedRate_t fr_mm_s) {
   DEBUG_SECTION(log_probe, "Probe::probe_down_to_z", DEBUGGING(LEVELING));
+
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    SERIAL_ECHOLNPGM("pd enter target=", z, " z=", current_position.z, " pen=", int(endstops.z_probe_enabled), " mod=", int(autoProbe.enable_calibration_module), " sw=", int(autoProbe.enable_probe_swtich));
+  #endif
 
   #if ALL(HAS_HEATED_BED, WAIT_FOR_BED_HEATER)
     thermalManager.wait_for_bed_heating();
@@ -921,6 +933,10 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
       bltouch._reset();
   #endif
 
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    SERIAL_ECHOLNPGM("pap enter x=", rx, " y=", ry, " z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
+  #endif
+
   // On delta keep Z below clip height or do_blocking_move_to will abort
   xyz_pos_t npos = NUM_AXIS_ARRAY(
     rx, ry, TERN(DELTA, _MIN(delta_clip_start_height, current_position.z), current_position.z),
@@ -945,6 +961,10 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
   thermalManager.set_fan_speed(0, 255);
   // Move the probe to the starting XYZ
   do_blocking_move_to(npos, feedRate_t(XY_PROBE_FEEDRATE_MM_S));
+
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    SERIAL_ECHOLNPGM("pap at xy z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
+  #endif
 
   thermalManager.set_fan_speed(0, 0);
 
