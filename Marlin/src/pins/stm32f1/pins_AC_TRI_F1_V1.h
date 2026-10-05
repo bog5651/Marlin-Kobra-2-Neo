@@ -256,6 +256,10 @@
     #define TFT_MOSI_PIN             PA7
     #define TFT_MISO_PIN             TFT_MOSI_PIN
 
+    // The stock bootloader leaves the panel initialized; the stock driver
+    // skips the software reset (and uses the stock init timings).
+    #define ST7789V_NO_SWRESET
+
     #define BTN_ENC                 PB4
     #define BTN_EN1                 PB10
     #define BTN_EN2                 PB3
