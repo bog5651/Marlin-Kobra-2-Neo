@@ -879,7 +879,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
 
     // Attempt to tare the probe
     if (TERN0(PROBE_TARE, tare())) return NAN;
-    thermalManager.set_fan_speed(0, 0);
+    TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
     // Do a first probe at the fast speed
     if (try_to_probe(PSTR("FAST"), z_probe_low_point, motion.z_probe_fast_mm_s, sanity_check)) return NAN;
 
@@ -897,7 +897,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
     for (uint8_t p = 0; p < hmiData.multiple_probing - 1; p++) {
       // If the probe won't tare, return
       if (TERN0(PROBE_TARE, tare())) return true;
-      thermalManager.set_fan_speed(0, 0);
+      TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
       // Probe downward slowly to find the bed
       if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Slow Probe:");
       if (try_to_probe(PSTR("SLOW"), z_probe_low_point, motion.z_probe_slow_mm_s, sanity_check)) return NAN;
@@ -924,7 +924,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
       if (ABS(z2 - z1) >= z_probe_diff) {
         motion.do_z_clearance(z2 + (Z_CLEARANCE_MULTI_PROBE), false);
         if (TERN0(PROBE_TARE, tare())) return NAN;
-        thermalManager.set_fan_speed(0, 0);
+        TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
         if (try_to_probe(PSTR("EXTRA"), z_probe_low_point, motion.z_probe_fast_mm_s, sanity_check)) return NAN;
         const float z3 = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, motion.position.z, largest_sensorless_adj);
         if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("extra Probe Z:", z3, " Discrepancy:", z1 - z3);
@@ -1032,7 +1032,7 @@ float Probe::probe_at_point(
   }
   if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM(" point");
 
-  thermalManager.set_fan_speed(0, 255);
+  TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 255));
   // Move the probe to the starting XYZ
   motion.blocking_move(npos, feedRate_t(XY_PROBE_FEEDRATE_MM_S));
 
@@ -1041,7 +1041,7 @@ float Probe::probe_at_point(
 
   float measured_z;
 
-  thermalManager.set_fan_speed(0, 0);
+  TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
 
   #if ENABLED(BD_SENSOR)
 
