@@ -25,6 +25,7 @@
 #include "../MarlinCore.h" // for printingIsPaused
 #include "../HAL/STM32/autoGetZoffset.h"
 #include "../feature/runout.h"
+#include "../module/stepper.h"
 
 #if LED_POWEROFF_TIMEOUT > 0 || ALL(HAS_WIRED_LCD, PRINTER_EVENT_LEDS)
   #include "../feature/leds/leds.h"
@@ -1793,11 +1794,15 @@ void MarlinUI::init() {
     pause_pending = false;
     #if HAS_MEDIA
       wait_for_heatup = wait_for_user = false;
-      card.abortFilePrintSoon();
+      queue.clear();                        // Drop stale M25/M24 so a blocked M125 cannot re-enter M125
+      card.flag.abort_sd_printing = true;   // Always service the abort in loop()
       did_pause_print = 0;
-  
+
       runout.filament_ran_out = false;
-      ui.clear_all = ui.start_print_status = false;  
+      ui.clear_all = ui.start_print_status = false;
+      ui.seclect = 2;                       // Leave the preheat slot disarmed
+      thermalManager.disable_all_heaters(); // Heat off now, even if loop() is currently blocked
+      stepper.disable_all_steppers();
     #endif
     #ifdef ACTION_ON_CANCEL
       hostui.cancel();

@@ -377,6 +377,7 @@ void startOrResumeJob() {
 
     wait_for_heatup = false;
     TERN_(HAS_RESUME_CONTINUE, wait_for_user = false);
+    TERN_(HEATER_IDLE_HANDLER, thermalManager.heater_idle[0].reset());
     ui.pause_pending = false;
 
     TERN_(POWER_LOSS_RECOVERY, recovery.purge());
