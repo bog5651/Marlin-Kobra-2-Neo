@@ -522,10 +522,6 @@ void GcodeSuite::M2003()
 		autoProbe.clean();
 	}
 
-	if (parser.seen("P")){
-		while(1);
-	}
-	
 	SERIAL_ECHOLNPGM_P("dowen_error_count:",autoProbe.down_error_count);
 	SERIAL_ECHOLNPGM_P("up_error_count:",autoProbe.up_error_count);
 	

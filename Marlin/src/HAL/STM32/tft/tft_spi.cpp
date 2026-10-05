@@ -19,8 +19,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-#include "../../../lcd/tft/images/bsp_logo_data.h"
-
 #include "../../platforms.h"
 
 #ifdef HAL_STM32
@@ -38,14 +36,6 @@
 
 SPI_HandleTypeDef TFT_SPI::SPIx;
 DMA_HandleTypeDef TFT_SPI::DMAtx;
-void show_logo_secreen(){
-  uint8_t p;
-  for(uint32_t i= 0; i<768000;i++)
-  {
-
-    p = _ac[i];
-  }
-}
 
 void TFT_SPI::init() {
   SPI_TypeDef *spiInstance;

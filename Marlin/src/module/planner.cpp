@@ -1759,7 +1759,6 @@ bool Planner::_buffer_steps(const xyze_long_t &target
  *
  * @return  true if movement is acceptable, false otherwise
  */
-uint8_t steps_dir = false;
 bool Planner::_populate_block(
   block_t * const block,
   const abce_long_t &target
