@@ -1226,7 +1226,7 @@ void Endstops::update() {
           #if ENABLED(Z_MULTI_ENDSTOPS)
             PROCESS_ENDSTOP_Z(MAX);
           #elif TERN1(USES_Z_MIN_PROBE_PIN, Z_MAX_PIN != Z_MIN_PROBE_PIN)  // No probe or probe is Z_MIN || Probe is not Z_MAX
-            PROCESS_ENDSTOP(Z, MAX);
+            //PROCESS_ENDSTOP(Z, MAX);  // stock: never abort Z+ moves on the module switch
           #endif
           #if   CORE_DIAG(XZ, X, MIN)
             PROCESS_CORE_ENDSTOP(X,MIN,Z,MAX);
