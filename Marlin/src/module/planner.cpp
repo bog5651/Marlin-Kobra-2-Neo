@@ -1593,7 +1593,7 @@ bool Planner::busy() {
 void Planner::finish_and_disable() {
   while (has_blocks_queued() || cleaning_buffer_counter) marlin.idle();
   stepper.disable_all_steppers();
-  set_all_unhomed();
+  motion.set_all_unhomed();
 }
 
 /**
