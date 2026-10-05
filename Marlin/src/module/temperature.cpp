@@ -2604,6 +2604,10 @@ void Temperature::init() {
     HOTEND_LOOP() temp_hotend[e].modeled_block_temp = NAN;
   #endif
 
+  #if PIN_EXISTS(POWER_CTRL)
+    OUT_WRITE(POWER_CTRL_PIN, HIGH);  // Anycubic: enable heater power gate (PB6)
+  #endif
+
   #if HAS_HEATER_0
     #ifdef BOARD_OPENDRAIN_MOSFETS
       OUT_WRITE_OD(HEATER_0_PIN, ENABLED(HEATER_0_INVERTING));
@@ -2650,7 +2654,8 @@ void Temperature::init() {
   #endif
 
   #if HAS_FAN0
-    INIT_FAN_PIN(FAN0_PIN);
+    OUT_WRITE(FAN0_PIN, 0);           // stock: drive part cooling fan pin low at init
+    //INIT_FAN_PIN(FAN0_PIN);
   #endif
   #if HAS_FAN1
     INIT_FAN_PIN(FAN1_PIN);
