@@ -1026,7 +1026,10 @@ G29_TYPE GcodeSuite::G29() {
   #ifdef EVENT_GCODE_AFTER_G29
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("After G29 G-code: ", EVENT_GCODE_AFTER_G29);
     planner.synchronize();
+    process_subcommands_now(F("M500"));           // stock: persist the leveling mesh
     process_subcommands_now(F(EVENT_GCODE_AFTER_G29));
+    thermalManager.setTargetHotend(0, 0);         // stock: cool down after auto-level
+    TERN_(HAS_HEATED_BED, thermalManager.setTargetBed(0));
   #endif
 
   TERN_(SOVOL_SV06_RTS, RTS_AutoBedLevelPage());
