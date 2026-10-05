@@ -189,6 +189,7 @@ class PrintJobRecovery {
     static void commit_sdpos(const uint8_t index_w) { sdpos[index_w] = cmd_sdpos; }
 
     static bool enabled;
+    static bool purge_pending;        // Delete the recovery file once the media is back
     static void enable(const bool onoff);
     static void changed();
 

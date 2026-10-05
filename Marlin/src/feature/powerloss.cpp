@@ -37,6 +37,7 @@
 #endif
 
 bool PrintJobRecovery::enabled; // Initialized by settings.load
+bool PrintJobRecovery::purge_pending; // = false
 
 #if HAS_PLR_BED_THRESHOLD
   celsius_t PrintJobRecovery::bed_temp_threshold; // Initialized by settings.load
@@ -128,6 +129,10 @@ void PrintJobRecovery::changed() {
  * If a saved state exists send 'M1000 S' to initiate job recovery.
  */
 bool PrintJobRecovery::check() {
+  if (purge_pending) {          // The aborted job must not resume when the media returns
+    purge();
+    return false;
+  }
   //if (!card.isMounted()) card.mount();
   bool success = false;
   if (card.isMounted()) {
@@ -154,7 +159,12 @@ void PrintJobRecovery::cancel() {
  */
 void PrintJobRecovery::purge() {
   init();
-  card.removeJobRecoveryFile();
+  if (card.isMounted()) {
+    card.removeJobRecoveryFile();
+    purge_pending = false;
+  }
+  else
+    purge_pending = true; // Media is gone: delete the file when it comes back
 }
 
 /**
