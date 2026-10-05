@@ -781,8 +781,8 @@ void do_blocking_move_to(const xyze_pos_t &raw, const_feedRate_t fr_mm_s/*=0.0f*
     );
   }
   void do_z_clearance(const_float_t zclear, const bool lower_allowed/*=false*/) {
-    float zdest = zclear + current_position.z;  // stock: relative clearance
-    //if (!lower_allowed) NOLESS(zdest, current_position.z);
+    float zdest = zclear;
+    if (!lower_allowed) NOLESS(zdest, current_position.z);
     do_blocking_move_to_z(_MIN(zdest, Z_MAX_POS), TERN(HAS_BED_PROBE, z_probe_fast_mm_s, homing_feedrate(Z_AXIS)));
   }
   void do_z_clearance_by(const_float_t zclear) {
@@ -803,7 +803,7 @@ void remember_feedrate_and_scaling() {
 }
 void remember_feedrate_scaling_off() {
   remember_feedrate_and_scaling();
-  //feedrate_percentage = 100;  // stock: keep the user feedrate scaling
+  feedrate_percentage = 100;
 }
 void restore_feedrate_and_scaling() {
   feedrate_mm_s = saved_feedrate_mm_s;
