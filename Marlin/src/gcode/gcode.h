@@ -1377,6 +1377,14 @@ private:
     static void M710_report(const bool forReplay=true);
   #endif
 
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    static void M2000();
+    static void M2001();
+    static void M2002();
+    static void M2003();
+    static void M2005();
+  #endif
+
   static void T(const int8_t tool_index) IF_DISABLED(HAS_TOOLCHANGE, { UNUSED(tool_index); });
 
 };

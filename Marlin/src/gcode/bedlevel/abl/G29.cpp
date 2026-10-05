@@ -34,6 +34,10 @@
 #include "../../../module/planner.h"
 #include "../../../module/probe.h"
 #include "../../../module/temperature.h"
+
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../../../HAL/STM32/autoGetZoffset.h"
+#endif
 #include "../../queue.h"
 
 #if ENABLED(AUTO_BED_LEVELING_LINEAR)
@@ -228,6 +232,10 @@ public:
  *              There's no extra effect if you have a fixed Z probe.
  */
 G29_TYPE GcodeSuite::G29() {
+
+  #if HAS_BED_PROBE
+    probe.status = 0;             // stock: track probing failures for the end script
+  #endif
 
   DEBUG_SECTION(log_G29, "G29", DEBUGGING(LEVELING));
 
@@ -470,6 +478,14 @@ G29_TYPE GcodeSuite::G29() {
         if (!abl.dryrun) thermalManager.preheat_for_leveling();
       #endif
     }
+
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      // Stock: probe the calibration module and derive the Z offset before the mesh
+      if (autoProbe.ValibrationValueIsnan()) {
+        SERIAL_ECHOLN("run_calibration_probe FAILD");
+        return;
+      }
+    #endif
 
     // Position bed horizontally and Z probe vertically.
     #if HAS_SAFE_BED_LEVELING
@@ -1025,11 +1041,26 @@ G29_TYPE GcodeSuite::G29() {
 
   #ifdef EVENT_GCODE_AFTER_G29
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("After G29 G-code: ", EVENT_GCODE_AFTER_G29);
-    planner.synchronize();
-    process_subcommands_now(F("M500"));           // stock: persist the leveling mesh
-    process_subcommands_now(F(EVENT_GCODE_AFTER_G29));
-    thermalManager.setTargetHotend(0, 0);         // stock: cool down after auto-level
-    TERN_(HAS_HEATED_BED, thermalManager.setTargetBed(0));
+    if (probe.status != -1) {
+      planner.synchronize();
+      #if ENABLED(LEVEING_CALIBRATION_MODULE)
+        autoProbe.calculation();                      // stock: derive and store the Z offset
+      #endif
+      process_subcommands_now(F("M500"));             // stock: persist the leveling mesh
+      process_subcommands_now(F(EVENT_GCODE_AFTER_G29));
+      thermalManager.setTargetHotend(0, 0);           // stock: cool down after auto-level
+      TERN_(HAS_HEATED_BED, thermalManager.setTargetBed(0));
+    }
+    else {
+      thermalManager.setTargetHotend(0, 0);
+      TERN_(HAS_HEATED_BED, thermalManager.setTargetBed(0));
+      thermalManager.set_fan_speed(0, 0);
+      thermalManager.set_fan_speed(1, 0);
+      process_subcommands_now(F("M84"));
+      marlin.end_waiting();
+      planner.clear_block_buffer();
+      queue.clear();
+    }
   #endif
 
   TERN_(SOVOL_SV06_RTS, RTS_AutoBedLevelPage());

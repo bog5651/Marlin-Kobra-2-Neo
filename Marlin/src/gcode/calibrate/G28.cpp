@@ -264,6 +264,12 @@ void GcodeSuite::G28() {
     }
   #endif
 
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    // Stock: when the UI requested auto-calibration, preheat before homing
+    if (ui.lcdLeveingstate == LEVEING_HEATING)
+      TERN_(PREHEAT_BEFORE_LEVELING, thermalManager.preheat_for_leveling());
+  #endif
+
   /**
    * Set the laser power to false to stop the planner from processing the current power setting.
    */

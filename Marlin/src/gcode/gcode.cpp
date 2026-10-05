@@ -484,8 +484,8 @@ void GcodeSuite::process_parsed_command(bool no_ok/*=false*/) {
     case 'M': switch (parser.codenum) {
 
       #if HAS_RESUME_CONTINUE
-        case 0:                                                   // M0: Unconditional stop - Wait for user button press on LCD
-        case 1: M0_M1(); break;                                   // M1: Conditional stop - Wait for user button press on LCD
+        //case 0:                                                   // M0: Unconditional stop - Wait for user button press on LCD
+        //case 1: M0_M1(); break;                                   // M1: Conditional stop - Wait for user button press on LCD
       #endif
 
       #if HAS_CUTTER
@@ -585,6 +585,7 @@ void GcodeSuite::process_parsed_command(bool no_ok/*=false*/) {
 
       #if HAS_HOTEND
         case 104: M104(); break;                                  // M104: Set hot end temperature
+        //case 104:{if(printingIsActive()) M109();else M104();break;}
         case 109: M109(); break;                                  // M109: Wait for hotend temperature to reach target
       #endif
 
@@ -615,6 +616,7 @@ void GcodeSuite::process_parsed_command(bool no_ok/*=false*/) {
 
       #if HAS_HEATED_BED
         case 140: M140(); break;                                  // M140: Set bed temperature
+        //case 140:{if(printingIsActive()) M190();else M140();break;}
         case 190: M190(); break;                                  // M190: Wait for bed temperature to reach target
       #endif
 
@@ -1162,6 +1164,14 @@ void GcodeSuite::process_parsed_command(bool no_ok/*=false*/) {
 
       #if ENABLED(HAS_MCP3426_ADC)
         case 3426: M3426(); break;                                // M3426: Read MCP3426 ADC (over i2c)
+      #endif
+
+      #if ENABLED(LEVEING_CALIBRATION_MODULE)
+        case 2000: M2000();break;
+        case 2001: M2001();break;
+        case 2002: M2002();break;
+        case 2003: M2003();break;
+        case 2005: M2005();break;
       #endif
 
       default: parser.unknown_command_warning(); break;

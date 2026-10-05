@@ -26,6 +26,8 @@
 
 #include "../inc/MarlinConfig.h"
 
+#include "../HAL/STM32/autoGetZoffset.h"
+
 #if HAS_BED_PROBE
 
 #include "probe.h"
@@ -100,6 +102,7 @@
 #include "../core/debug_out.h"
 
 Probe probe;
+int8_t Probe::status = 0;
 
 xyz_pos_t Probe::offset; // Initialized by settings.load
 
@@ -617,7 +620,7 @@ bool Probe::probe_down_to_z(const float z, const feedRate_t fr_mm_s) {
     #if HAS_DELTA_SENSORLESS_PROBING
       PROBE_TRIGGERED()
     #else
-      TEST(endstops.trigger_state(), Z_MIN_PROBE)
+      TEST(endstops.trigger_state(), Z_MIN_PROBE) || (endstops.trigger_state() & (_BV(Z_MAX)))
     #endif
   );
 
@@ -876,13 +879,17 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
 
     // Attempt to tare the probe
     if (TERN0(PROBE_TARE, tare())) return NAN;
-
+    thermalManager.set_fan_speed(0, 0);
     // Do a first probe at the fast speed
     if (try_to_probe(PSTR("FAST"), z_probe_low_point, motion.z_probe_fast_mm_s, sanity_check)) return NAN;
 
     const float z1 = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, motion.position.z, largest_sensorless_adj);
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("1st Probe Z:", z1);
 
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      thermalManager.set_fan_speed(0, 255);
+      autoProbe.run_z_mm(RUN_DOWN_MM, 1);
+    #endif
     // Raise to give the probe clearance
     motion.do_z_clearance(z1 + (Z_CLEARANCE_MULTI_PROBE), false);
 
@@ -890,7 +897,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
     for (uint8_t p = 0; p < hmiData.multiple_probing - 1; p++) {
       // If the probe won't tare, return
       if (TERN0(PROBE_TARE, tare())) return true;
-
+      thermalManager.set_fan_speed(0, 0);
       // Probe downward slowly to find the bed
       if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Slow Probe:");
       if (try_to_probe(PSTR("SLOW"), z_probe_low_point, motion.z_probe_slow_mm_s, sanity_check)) return NAN;
@@ -901,6 +908,32 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/, const float z_min_poi
       probes_z_sum += z;
       // Small Z raise after probe
       motion.do_z_clearance(z + (Z_CLEARANCE_MULTI_PROBE), false);
+    }
+
+    if (hmiData.multiple_probing == 2) {
+      const float z2 = probes_z_sum;
+      if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("2nd Probe Z:", z2, " Discrepancy:", z1 - z2);
+
+      #if ENABLED(LEVEING_CALIBRATION_MODULE)
+        thermalManager.set_fan_speed(0, 255);
+        autoProbe.run_z_mm(RUN_DOWN_MM, 2);
+      #endif
+
+      // Stock: retry when the two probes disagree by 0.1mm or more
+      constexpr float z_probe_diff = 0.1f;
+      if (ABS(z2 - z1) >= z_probe_diff) {
+        motion.do_z_clearance(z2 + (Z_CLEARANCE_MULTI_PROBE), false);
+        if (TERN0(PROBE_TARE, tare())) return NAN;
+        thermalManager.set_fan_speed(0, 0);
+        if (try_to_probe(PSTR("EXTRA"), z_probe_low_point, motion.z_probe_fast_mm_s, sanity_check)) return NAN;
+        const float z3 = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, motion.position.z, largest_sensorless_adj);
+        if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("extra Probe Z:", z3, " Discrepancy:", z1 - z3);
+        #if ENABLED(LEVEING_CALIBRATION_MODULE)
+          thermalManager.set_fan_speed(0, 255);
+          autoProbe.run_z_mm(RUN_DOWN_MM, 2);
+        #endif
+        return (z3 * 3.0f + z1 * 2.0f) * 0.2f;
+      }
     }
 
     // Return a weighted average of the fast and slow probes
@@ -979,7 +1012,15 @@ float Probe::probe_at_point(
     motion.position.i, motion.position.j, motion.position.k,
     motion.position.u, motion.position.v, motion.position.w
   );
-  if (!can_reach(npos, probe_relative)) {
+  // Skip the reachability test while probing the calibration module (stock)
+  const bool calibration_module_active =
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      autoProbe.enable_calibration_module
+    #else
+      false
+    #endif
+  ;
+  if (!calibration_module_active && !can_reach(npos, probe_relative)) {
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Not Reachable");
     return NAN;
   }
@@ -991,6 +1032,7 @@ float Probe::probe_at_point(
   }
   if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM(" point");
 
+  thermalManager.set_fan_speed(0, 255);
   // Move the probe to the starting XYZ
   motion.blocking_move(npos, feedRate_t(XY_PROBE_FEEDRATE_MM_S));
 
@@ -998,6 +1040,8 @@ float Probe::probe_at_point(
   TERN_(PROBING_USE_CURRENT_HOME, motion.set_homing_current(Z_AXIS));
 
   float measured_z;
+
+  thermalManager.set_fan_speed(0, 0);
 
   #if ENABLED(BD_SENSOR)
 
@@ -1035,6 +1079,7 @@ float Probe::probe_at_point(
 
     // If any error occurred stow the probe and set an alert
     if (isnan(measured_z)) {
+      status = -1;
       // TODO: Disable steppers (unless G29_RETRY_AND_RECOVER or G29_HALT_ON_FAILURE are set).
       // Something definitely went wrong at this point, so it might be a good idea to release the steppers.
       // The user may want to quickly move the carriage or bed by hand to avoid bed damage from the (hot) nozzle.

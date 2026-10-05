@@ -226,11 +226,23 @@ typedef bool (*statusResetFunc_t)();
 //////////// MarlinUI Singleton ////////////
 ////////////////////////////////////////////
 
+// Kobra2 Neo calibration module state (temporary shim for the module port;
+// the full stock UI merge will supersede this)
+enum LCDLeveingState : uint8_t {
+  LEVEING_NONE,
+  LEVEING_HEATING,
+  LEVEING_PROBE,
+  LEVEING_WIPE_NOZZLE,
+  LEVEING_DONE
+};
+
 class MarlinUI;
 extern MarlinUI ui;
 
 class MarlinUI {
 public:
+
+  static LCDLeveingState lcdLeveingstate;
 
   MarlinUI() {
     TERN_(HAS_MARLINUI_MENU, currentScreen = status_screen);
