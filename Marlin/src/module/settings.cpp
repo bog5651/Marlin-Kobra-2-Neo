@@ -67,6 +67,10 @@
   #include "probe.h"
 #endif
 
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../HAL/STM32/autoGetZoffset.h"
+#endif
+
 #if HAS_LEVELING
   #include "../feature/bedlevel/bedlevel.h"
   #if ENABLED(X_AXIS_TWIST_COMPENSATION)
@@ -1896,6 +1900,10 @@ void MarlinSettings::postprocess() {
     }
 
     TERN_(EXTENSIBLE_UI, ExtUI::onSettingsStored(success));
+
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      autoProbe.write(); // Stock: persist a pending calibration module position on M500
+    #endif
 
     // Remember the error condition so One-Click Printing can be skipped
     #if ENABLED(ONE_CLICK_PRINT) && NONE(EEPROM_AUTO_INIT, EEPROM_INIT_NOW)

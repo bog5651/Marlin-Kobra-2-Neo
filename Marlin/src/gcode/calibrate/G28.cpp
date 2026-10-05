@@ -182,7 +182,7 @@
 
       #if ENABLED(LEVEING_CALIBRATION_MODULE)
         thermalManager.set_fan_speed(0, 0);
-        motion.destination.x = NOZZLE_X - probe.offset_xy.x;     // stock: home Z over the calibration module
+        motion.destination.x = autoProbe.calibration_positon.x - probe.offset_xy.x; // stock: home Z over the calibration module
         motion.destination.y = Y_BED_SIZE - probe.offset_xy.y;
       #endif
 

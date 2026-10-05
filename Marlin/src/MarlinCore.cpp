@@ -34,6 +34,10 @@
 #include "HAL/shared/esp_wifi.h"
 #include "HAL/shared/cpu_exception/exception_hook.h"
 
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "HAL/STM32/autoGetZoffset.h"
+#endif
+
 #if ENABLED(WIFISUPPORT)
   #include "HAL/shared/esp_wifi.h"
 #endif
@@ -1727,6 +1731,13 @@ void setup() {
 
   #if ENABLED(FT_MOTION)
     SETUP_RUN(ftMotion.init());
+  #endif
+
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    // Stock: restore or initialize the calibration module position at boot
+    autoProbe.load_config();
+    autoProbe.up_error_count = 0;
+    autoProbe.down_error_count = 0;
   #endif
 
   marlin.setState(MF_RUNNING);
