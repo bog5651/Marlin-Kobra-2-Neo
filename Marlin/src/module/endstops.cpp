@@ -31,6 +31,10 @@
 #include "temperature.h"
 #include "../lcd/marlinui.h"
 
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../HAL/STM32/autoGetZoffset.h"
+#endif
+
 #define DEBUG_OUT ALL(USE_SENSORLESS, DEBUG_LEVELING_FEATURE)
 #include "../core/debug_out.h"
 
@@ -1189,7 +1193,13 @@ void Endstops::update() {
         #if USE_Z_MIN || (Z_SPI_SENSORLESS && Z_HOME_TO_MIN)
           if ( TERN1(Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN, z_probe_enabled)
             && TERN1(USES_Z_MIN_PROBE_PIN, !z_probe_enabled)
-          ) PROCESS_ENDSTOP_Z(MIN);
+          ) {
+            #if ENABLED(LEVEING_CALIBRATION_MODULE)
+              if (!autoProbe.enable_probe_swtich) PROCESS_ENDSTOP_Z(MIN);
+            #else
+              PROCESS_ENDSTOP_Z(MIN);
+            #endif
+          }
           #if   CORE_DIAG(XZ, X, MIN)
             PROCESS_CORE_ENDSTOP(X,MIN,Z,MIN);
           #elif CORE_DIAG(XZ, X, MAX)
@@ -1204,6 +1214,11 @@ void Endstops::update() {
         // When closing the gap check the enabled probe
         #if USES_Z_MIN_PROBE_PIN
           if (z_probe_enabled) PROCESS_ENDSTOP(Z, MIN_PROBE);
+        #endif
+
+        #if ENABLED(LEVEING_CALIBRATION_MODULE)
+          // Stock: the calibration module switch on Z_MAX acts as the probe trigger
+          if (autoProbe.enable_calibration_module) PROCESS_ENDSTOP(Z, MAX);
         #endif
       }
       else { // Z +direction. Gantry up, bed down.

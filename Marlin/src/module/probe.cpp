@@ -26,6 +26,8 @@
 
 #include "../inc/MarlinConfig.h"
 
+#include "../HAL/STM32/autoGetZoffset.h"
+
 #if HAS_BED_PROBE
 
 #include "probe.h"
@@ -104,6 +106,7 @@
 #include "../core/debug_out.h"
 
 Probe probe;
+int8_t Probe::status = 0;
 
 xyz_pos_t Probe::offset; // Initialized by settings.load
 
@@ -624,7 +627,7 @@ bool Probe::probe_down_to_z(const_float_t z, const_feedRate_t fr_mm_s) {
     #if HAS_DELTA_SENSORLESS_PROBING
       endstops.trigger_state() & (_BV(X_MAX) | _BV(Y_MAX) | _BV(Z_MAX))
     #else
-      TEST(endstops.trigger_state(), Z_MIN_PROBE)
+      TEST(endstops.trigger_state(), Z_MIN_PROBE) || (endstops.trigger_state() & (_BV(Z_MAX)))
     #endif
   );
 
@@ -741,7 +744,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
 
     // Attempt to tare the probe
     if (TERN0(PROBE_TARE, tare())) return NAN;
-
+    thermalManager.set_fan_speed(0, 0);
     // Do a first probe at the fast speed
     if (try_to_probe(PSTR("FAST"), z_probe_low_point, z_probe_fast_mm_s,
                      sanity_check, Z_CLEARANCE_BETWEEN_PROBES) ) return NAN;
@@ -749,6 +752,10 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     const float z1 = DIFF_TERN(HAS_DELTA_SENSORLESS_PROBING, current_position.z, largest_sensorless_adj);
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("1st Probe Z:", z1);
 
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      thermalManager.set_fan_speed(0, 255);
+      autoProbe.run_z_mm(RUN_DOWN_MM, 1);
+    #endif
     // Raise to give the probe clearance
     do_blocking_move_to_z(current_position.z + Z_CLEARANCE_MULTI_PROBE, z_probe_fast_mm_s);
 
@@ -781,10 +788,10 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     {
       // If the probe won't tare, return
       if (TERN0(PROBE_TARE, tare())) return true;
-
+      thermalManager.set_fan_speed(0, 0);
       // Probe downward slowly to find the bed
       if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW),
-                       sanity_check, Z_CLEARANCE_MULTI_PROBE) ) return NAN;
+                       sanity_check, Z_CLEARANCE_BETWEEN_PROBES) ) return NAN;
 
       TERN_(MEASURE_BACKLASH_WHEN_PROBING, backlash.measure_with_probe());
 
@@ -843,6 +850,28 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
 
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("2nd Probe Z:", z2, " Discrepancy:", z1 - z2);
 
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      thermalManager.set_fan_speed(0, 255);
+      autoProbe.run_z_mm(RUN_DOWN_MM, 2);
+    #endif
+
+    // Stock: retry when the two probes disagree by 0.1mm or more
+    constexpr float z_probe_diff = 0.1f;
+    if (ABS(z2 - z1) >= z_probe_diff) {
+      do_blocking_move_to_z(current_position.z + Z_CLEARANCE_MULTI_PROBE, z_probe_fast_mm_s);
+      if (TERN0(PROBE_TARE, tare())) return NAN;
+      thermalManager.set_fan_speed(0, 0);
+      if (try_to_probe(PSTR("EXTRA"), z_probe_low_point, z_probe_fast_mm_s,
+                       sanity_check, Z_CLEARANCE_BETWEEN_PROBES) ) return NAN;
+      const float z3 = current_position.z;
+      if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("extra Probe Z:", z3, " Discrepancy:", z1 - z3);
+      #if ENABLED(LEVEING_CALIBRATION_MODULE)
+        thermalManager.set_fan_speed(0, 255);
+        autoProbe.run_z_mm(RUN_DOWN_MM, 2);
+      #endif
+      return (z3 * 3.0f + z1 * 2.0f) * 0.2f;
+    }
+
     // Return a weighted average of the fast and slow probes
     const float measured_z = (z2 * 3.0f + z1 * 2.0f) * 0.2f;
 
@@ -889,14 +918,26 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
     current_position.i, current_position.j, current_position.k,
     current_position.u, current_position.v, current_position.w
   );
-  if (!can_reach(npos, probe_relative)) {
+  // Skip the reachability test while probing the calibration module (stock)
+  const bool calibration_module_active =
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      autoProbe.enable_calibration_module
+    #else
+      false
+    #endif
+  ;
+  if (!calibration_module_active && !can_reach(npos, probe_relative)) {
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("Not Reachable");
     return NAN;
   }
+
   if (probe_relative) npos -= offset_xy;  // Get the nozzle position
 
+  thermalManager.set_fan_speed(0, 255);
   // Move the probe to the starting XYZ
   do_blocking_move_to(npos, feedRate_t(XY_PROBE_FEEDRATE_MM_S));
+
+  thermalManager.set_fan_speed(0, 0);
 
   #if ENABLED(BD_SENSOR)
     return current_position.z - bdl.read(); // Difference between Z-home-relative Z and sensor reading
@@ -909,6 +950,7 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
     TERN_(X_AXIS_TWIST_COMPENSATION, measured_z += xatc.compensation(npos + offset_xy));
   }
   if (!isnan(measured_z)) {
+    thermalManager.set_fan_speed(0, 255);
     if (raise_after == PROBE_PT_RAISE)
       do_blocking_move_to_z(current_position.z + Z_CLEARANCE_BETWEEN_PROBES, z_probe_fast_mm_s);
     else if (raise_after == PROBE_PT_STOW || raise_after == PROBE_PT_LAST_STOW)
@@ -919,6 +961,7 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
   }
 
   if (isnan(measured_z)) {
+  	status = -1;
     stow();
     LCD_MESSAGE(MSG_LCD_PROBING_FAILED);
     #if DISABLED(G29_RETRY_AND_RECOVER)

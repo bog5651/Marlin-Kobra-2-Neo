@@ -217,6 +217,12 @@ void GcodeSuite::G28() {
 
   TERN_(BD_SENSOR, bdl.config_state = 0);
 
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    // Stock: when the UI requested auto-calibration, preheat before homing
+    if (ui.lcdLeveingstate == LEVEING_HEATING)
+      probe.preheat_for_probing(LEVELING_NOZZLE_TEMP, LEVELING_BED_TEMP);
+  #endif
+
   /**
    * Set the laser power to false to stop the planner from processing the current power setting.
    */

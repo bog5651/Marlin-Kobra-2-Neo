@@ -385,6 +385,8 @@ void MarlinUI::init() {
   #if HAS_MARLINUI_MENU
     #include "menu/menu.h"
 
+    LCDLeveingState MarlinUI::lcdLeveingstate; // Kobra2 Neo module shim
+
     screenFunc_t MarlinUI::currentScreen; // Initialized in CTOR
     bool MarlinUI::screen_changed;
 
