@@ -23,6 +23,8 @@
 #include "../inc/MarlinConfig.h"
 
 #include "../gcode/parser.h" // for axis_is_rotational, using_inch_units
+#include "../module/stepper.h"
+#include "../feature/runout.h"
 
 #if HAS_LED_POWEROFF_TIMEOUT || ALL(HAS_WIRED_LCD, PRINTER_EVENT_LEDS) || (HAS_BACKLIGHT_TIMEOUT && defined(NEOPIXEL_BKGD_INDEX_FIRST))
   #include "../feature/leds/leds.h"
@@ -1823,9 +1825,13 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
 #if HAS_DISPLAY
 
   void MarlinUI::abort_print() {
-    pause_pending = false;
     #if HAS_MEDIA
       marlin.end_waiting();
+      queue.clear();                        // Drop stale M25/M24 so a blocked M125 cannot re-enter M125
+      did_pause_print = 0;
+      runout.filament_ran_out = false;
+      thermalManager.disable_all_heaters(); // Heat off now, even if loop() is currently blocked
+      stepper.disable_all_steppers();
       if (card.isStillPrinting())
         card.abortFilePrintSoon();
       else if (card.isMounted())
@@ -1869,8 +1875,6 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
    *   - For a host-only printer tell the host to pause the print in progress.
    */
   void MarlinUI::pause_print() {
-    if (pause_pending || printingIsPaused() || did_pause_print) return; // Pause already active or requested
-    pause_pending = true;
     #if HAS_MARLINUI_MENU
       synchronize(GET_TEXT_F(MSG_PAUSING));
       defer_status_screen();
@@ -1893,7 +1897,6 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
   }
 
   void MarlinUI::resume_print() {
-    pause_pending = false;
     reset_status();
     TERN_(PARK_HEAD_ON_PAUSE, marlin.end_waiting());
     TERN_(HAS_MEDIA, if (card.isPaused()) queue.inject_P(M24_STR));
