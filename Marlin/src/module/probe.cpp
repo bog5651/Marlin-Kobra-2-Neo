@@ -631,6 +631,10 @@ bool Probe::probe_down_to_z(const_float_t z, const_feedRate_t fr_mm_s) {
     #endif
   );
 
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    SERIAL_ECHOLNPGM("down target=", z, " z=", current_position.z, " trig=", int(probe_triggered), " zmaxpin=", int(READ(Z_MAX_PIN)));
+  #endif
+
   // Offset sensorless probing
   #if HAS_DELTA_SENSORLESS_PROBING
     if (probe_triggered) refresh_largest_sensorless_adj();
@@ -753,11 +757,15 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("1st Probe Z:", z1);
 
     #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      SERIAL_ECHOLNPGM("fast z1=", z1, " pin=", int(READ(Z_MAX_PIN)));
       thermalManager.set_fan_speed(0, 255);
       autoProbe.run_z_mm(RUN_DOWN_MM, 1);
     #endif
     // Raise to give the probe clearance
     do_blocking_move_to_z(current_position.z + Z_CLEARANCE_MULTI_PROBE, z_probe_fast_mm_s);
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      SERIAL_ECHOLNPGM("after raise1 z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
+    #endif
 
   #elif Z_PROBE_FEEDRATE_FAST != Z_PROBE_FEEDRATE_SLOW
 
@@ -851,6 +859,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPGM("2nd Probe Z:", z2, " Discrepancy:", z1 - z2);
 
     #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      SERIAL_ECHOLNPGM("slow z2=", z2, " pin=", int(READ(Z_MAX_PIN)));
       thermalManager.set_fan_speed(0, 255);
       autoProbe.run_z_mm(RUN_DOWN_MM, 2);
     #endif
@@ -951,10 +960,16 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
   }
   if (!isnan(measured_z)) {
     thermalManager.set_fan_speed(0, 255);
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      SERIAL_ECHOLNPGM("probe ok mz=", measured_z, " cur=", current_position.z, " raise=", int(raise_after));
+    #endif
     if (raise_after == PROBE_PT_RAISE)
       do_blocking_move_to_z(current_position.z + Z_CLEARANCE_BETWEEN_PROBES, z_probe_fast_mm_s);
     else if (raise_after == PROBE_PT_STOW || raise_after == PROBE_PT_LAST_STOW)
       if (stow()) measured_z = NAN;   // Error on stow?
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      SERIAL_ECHOLNPGM("after final raise z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
+    #endif
 
     if (verbose_level > 2)
       SERIAL_ECHOLNPGM("Bed X: ", LOGICAL_X_POSITION(rx), " Y: ", LOGICAL_Y_POSITION(ry), " Z: ", measured_z);

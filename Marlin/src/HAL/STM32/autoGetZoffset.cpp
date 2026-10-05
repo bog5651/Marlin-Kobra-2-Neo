@@ -41,8 +41,10 @@ void AutoProbe::run_z_mm(float mm,uint8_t num)
 {
 	if(!need_z_down) return;
 	enable_calibration_module = false;
+	SERIAL_ECHOLNPGM("run_z_mm ", num, " pre z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
 	do_blocking_move_to_z(current_position.z+mm,5);
 	safe_delay(500);
+	SERIAL_ECHOLNPGM("run_z_mm ", num, " post z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
 
 	enable_calibration_module = true;
 }
@@ -389,10 +391,12 @@ bool AutoProbe::module_calibration()
 		endstops.z_probe_enabled = false;
 		need_z_down = need_shake = true;
 		LeveingFailSattue = false;
+		SERIAL_ECHOLNPGM("module_cal start z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
 				
 		do_blocking_move_to_z(current_position.z+5,5);
 
 		do_blocking_move_to_xy(calibration_positon.x,calibration_positon.y,100);
+		SERIAL_ECHOLNPGM("module_cal at module z=", current_position.z, " pin=", int(READ(Z_MAX_PIN)));
 		
 		//
 		if( READ(Z_MAX_PIN) != Z_MAX_ENDSTOP_INVERTING){
