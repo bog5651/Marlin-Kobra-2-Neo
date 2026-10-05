@@ -961,13 +961,6 @@ void menu_about(){
 
 void sd_card_removed(){
 
-	static millis_t flash_time = 0;
-	if(millis() < (flash_time + 1000) ) {
-    SERIAL_ECHOLNPGM("sd_card_removed");
-
-  }
-  
-  SERIAL_ECHOLNPGM("sd_card_removed");
   if(ui.use_click()){
 	  ui.start_print_status = false;
 	  ui.print_task_done = false;

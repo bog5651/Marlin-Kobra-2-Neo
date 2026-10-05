@@ -3523,6 +3523,14 @@ void MarlinSettings::reset() {
     #endif
   #endif
 
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    // Stock: M502 restores the calibration module position defaults
+    autoProbe.calibration_positon.x = NOZZLE_X;
+    autoProbe.calibration_positon.y = NOZZLE_Y;
+    autoProbe.calibration_positon.z = WIPE;
+    autoProbe.need_save_data = true;
+  #endif
+
   postprocess();
 
   #if ANY(EEPROM_CHITCHAT, DEBUG_LEVELING_FEATURE)

@@ -1220,11 +1220,11 @@ void GcodeSuite::process_subcommands_now(char * gcode) {
       switch (busy_state) {
         case IN_HANDLER:
         case IN_PROCESS:
-          //SERIAL_ECHO_MSG(STR_BUSY_PROCESSING);
+          SERIAL_ECHO_MSG(STR_BUSY_PROCESSING);
           TERN_(FULL_REPORT_TO_HOST_FEATURE, report_current_position_moving());
           break;
         case PAUSED_FOR_USER:
-          //SERIAL_ECHO_MSG(STR_BUSY_PAUSED_FOR_USER);
+          SERIAL_ECHO_MSG(STR_BUSY_PAUSED_FOR_USER);
           TERN_(FULL_REPORT_TO_HOST_FEATURE, set_and_report_grblstate(M_HOLD));
           break;
         case PAUSED_FOR_INPUT:
