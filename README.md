@@ -43,9 +43,12 @@ the factory firmware.
 6. **Исправленные баги порта.** Возобновление печати после паузы (deadlock
    Purge-more) и полная остановка печати: нагрев и моторы выключаются
    (`G28XY` + `M84`).
-7. **Включены фичи, вырезанные заводом.** `ENABLE_LEVELING_FADE_HEIGHT`,
-   `SDCARD_SORT_ALPHA`, `SCROLL_LONG_FILENAMES`, `G26_MESH_VALIDATION`;
-   дёргание part-fan вокруг проб вынесено в опцию `PROBING_PART_COOLING_FAN`.
+7. **Включено сверх завода.** `ENABLE_LEVELING_FADE_HEIGHT`,
+   `SDCARD_SORT_ALPHA`, `SCROLL_LONG_FILENAMES`, `G26_MESH_VALIDATION`,
+   `EMERGENCY_PARSER`, `HOST_ACTION_COMMANDS`/`HOST_PROMPT_SUPPORT`,
+   `MEATPACK_ON_SERIAL_PORT_1`; дёргание part-fan вокруг проб вынесено в
+   опцию `PROBING_PART_COOLING_FAN`. Полный список с методикой проверки —
+   [`docs/ENABLED_VS_STOCK.md`](docs/ENABLED_VS_STOCK.md).
 
 ## Что намеренно не перенесено с завода
 
@@ -64,8 +67,9 @@ the factory firmware.
 | Busy-wait циклы нагрева в модуле калибровки | сохранены до проверки на железе |
 
 Намеренные отклонения от заводского поведения: сетка BILINEAR 7x7 вместо 5x5
-(точнее автоуровень) и `Z_PROBE_END_SCRIPT "G28XY"` без `M84` (чтобы G29 в
-начале печати не помечал оси нехоженными).
+(точнее автоуровень), `Z_PROBE_END_SCRIPT "G28XY"` без `M84` (чтобы G29 в
+начале печати не помечал оси нехоженными) и выключенный заводской
+`DEBUG_LEVELING_FEATURE` (отладочный режим).
 
 ## Сборка и прошивка
 
