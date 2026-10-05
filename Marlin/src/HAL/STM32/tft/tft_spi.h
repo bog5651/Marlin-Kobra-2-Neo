@@ -41,6 +41,9 @@
 #define DATASIZE_32BIT SPI_DATASIZE_32BIT
 #define TFT_IO_DRIVER  TFT_SPI
 #define DMA_MAX_WORDS  0xFFFF
+#ifndef DMA_MAX_SIZE
+  #define DMA_MAX_SIZE DMA_MAX_WORDS // Stock TFT code name for the same limit
+#endif
 
 class TFT_SPI {
 private:

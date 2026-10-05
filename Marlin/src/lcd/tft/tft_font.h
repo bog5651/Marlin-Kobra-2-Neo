@@ -21,29 +21,20 @@
  */
 #pragma once
 
-#define MARLIN_LOGO_FULL_SIZE MarlinLogo320x240x16
+#include "../../inc/MarlinConfigPre.h"
 
-#include "ui_common.h"
+#if HAS_GRAPHICAL_TFT
 
-#define TFT_STATUS_TOP_Y       0
-#define TFT_TOP_LINE_Y         2
+#define JOIN(A,B,C)         CAT(CAT(A, B), C)
+#define MENU_FONT_NAME      JOIN(FONT_FAMILY, _, FONT_SIZE)
+//#define SYMBOLS_FONT_NAME   JOIN(FONT_FAMILY, _Symbols_, FONT_SIZE)
 
-#define MENU_TEXT_X_OFFSET    10
-#define MENU_TEXT_Y_OFFSET    tft_string.vcenter(MENU_ITEM_HEIGHT)
+extern const uint8_t MENU_FONT_NAME[];
+extern const uint8_t SYMBOLS_FONT_NAME[];
 
-#define MENU_ITEM_ICON_X       0
-#define MENU_ITEM_ICON_Y       0
-#define MENU_ITEM_ICON_SPACE  32
-
-#define MENU_ITEM_HEIGHT      32
-#define MENU_LINE_HEIGHT      (MENU_ITEM_HEIGHT + 2)
-
-#if (TFT_FONT == NOTOSANS) || (TFT_FONT == HELVETICA)
-  #define FONT_SIZE           14
-#elif TFT_FONT == UNIFONT
-  #define FONT_SIZE           10
+#ifdef FONT_EXTRA
+  #define EXTRA_FONT_NAME   JOIN(FONT_FAMILY, JOIN(_, FONT_EXTRA, _), FONT_SIZE)
+  extern const uint8_t EXTRA_FONT_NAME[];
 #endif
 
-#define FONT_LINE_HEIGHT      24
-
-#include "tft_font.h"
+#endif // HAS_GRAPHICAL_TFT

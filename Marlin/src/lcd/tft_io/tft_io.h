@@ -33,17 +33,14 @@
   #error "TFT IO only supports SPI, FSMC or LTDC interface."
 #endif
 
-#ifndef DMA_MAX_WORDS
-  #error "DMA_MAX_WORDS is not configured for this platform."
+#ifndef DMA_MAX_SIZE
+  #error "DMA_MAX_SIZE is not configured for this platform."
 #endif
 
-// Each TFT Driver is responsible for its default color mode.
-// #ifndef TFT_COLOR
-//   #define TFT_COLOR   TFT_COLOR_RGB
-// #endif
+#include "tft_orientation.h"
 
 #ifndef TFT_DRIVER
-  #define TFT_DRIVER AUTO
+  #define TFT_DRIVER    AUTO
 #endif
 
 #define ESC_REG(x)   0xFFFF, 0x00FF & (uint16_t)x

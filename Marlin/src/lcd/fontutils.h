@@ -21,29 +21,7 @@
  */
 #pragma once
 
-#define MARLIN_LOGO_FULL_SIZE MarlinLogo320x240x16
-
-#include "ui_common.h"
-
-#define TFT_STATUS_TOP_Y       0
-#define TFT_TOP_LINE_Y         2
-
-#define MENU_TEXT_X_OFFSET    10
-#define MENU_TEXT_Y_OFFSET    tft_string.vcenter(MENU_ITEM_HEIGHT)
-
-#define MENU_ITEM_ICON_X       0
-#define MENU_ITEM_ICON_Y       0
-#define MENU_ITEM_ICON_SPACE  32
-
-#define MENU_ITEM_HEIGHT      32
-#define MENU_LINE_HEIGHT      (MENU_ITEM_HEIGHT + 2)
-
-#if (TFT_FONT == NOTOSANS) || (TFT_FONT == HELVETICA)
-  #define FONT_SIZE           14
-#elif TFT_FONT == UNIFONT
-  #define FONT_SIZE           10
-#endif
-
-#define FONT_LINE_HEIGHT      24
-
-#include "tft_font.h"
+// The stock-era font utilities (lchar_t, read_byte_*, utf8_strlen, …)
+// now live in lcd/utf8.h in Marlin 2.1.2.8. Kept as a compatibility shim
+// because the stock TFT font code includes "fontutils.h".
+#include "utf8.h"
