@@ -186,69 +186,6 @@ void AutoProbe::calculation()
 	float diff = temp_lev1.z - temp_lev.z;
 	z_offset = module_probe_value - DEVIATION - SWTICH_DEVIATION + diff;
 	probe.offset.z = z_offset + calibration_positon.z;
-	
-  	#if 0
-	{
-		char str[256] = {0};
-		char str1[16] = {0};
-		char str2[16] = {0};
-		char str3[16] = {0};
-		char str4[16] = {0};
-		recovery.open(false);
-		sprintf_P(str, PSTR("diff:%s calibration_positon.z:%s module_probe_value:%s  probe.offset.z:%s "),
-							dtostrf(diff,1,3,str1), dtostrf(calibration_positon.z,1,3,str2),
-							dtostrf(module_probe_value,1,3,str3), dtostrf(probe.offset.z,1,3,str4));
-		serial_println_P(str);
-		recovery.file.writeln_P(str);	
-		recovery.file.writeln_P("Bilinear Leveling Grid:");	
-		const float *values = bedlevel.z_values[0];
-		for(int i = 0; i < GRID_MAX_POINTS_X; i++)
-		{
-			uint8_t count = 6;
-			count *= (PROPORTIONAL_FONT_RATIO);
-			while(count--){
-				recovery.file.write_P(" ");
-			}
-			sprintf_P(str,"%d",i);
-			//serial_print_P(str);
-			recovery.file.write_P(str);
-
-		}
-		recovery.file.write_P("\n");
-		//serial_print_P("\n");
-		for(int y = 0; y < GRID_MAX_POINTS_Y; y++)
-		{
-
-				recovery.file.write_P(" ");
-
-				sprintf_P(str,"%d ",y);
-				//serial_print_P(str);
-				recovery.file.write_P(str);
-				for(int x = 0; x < GRID_MAX_POINTS_X; x++)
-				{		
-						memset(str,0,sizeof(str));
-						float offset = values[ x*GRID_MAX_POINTS_Y + y];
-						if (!isnan(offset)){
-							if (offset >= 0) 
-								sprintf_P(str,PSTR("+%s"),dtostrf(offset,1,3,str1));
-							else
-								sprintf_P(str,PSTR("%s "),dtostrf(offset,1,3,str1));
-						}			
-						//serial_print_P(str);
-						recovery.file.write_P(str);
-				}
-				//serial_print_P("\n");
-				recovery.file.write_P("\n");
-		}
-
-		recovery.file.writeln_P("====================================");
-		recovery.close();
-	}
-  #endif
-
-
-	
-
 }
 
 
