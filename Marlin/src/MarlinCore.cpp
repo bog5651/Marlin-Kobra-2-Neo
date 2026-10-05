@@ -401,6 +401,8 @@ void Marlin::startOrResumeJob() {
     TERN(HAS_CUTTER, cutter.kill(), thermalManager.zero_fan_speeds()); // Full cutter shutdown including ISR control
 
     marlin.heatup_done();
+    TERN_(HAS_RESUME_CONTINUE, marlin.user_resume());
+    TERN_(HEATER_IDLE_HANDLER, thermalManager.heater_idle[0].reset());
 
     TERN_(POWER_LOSS_RECOVERY, recovery.purge());
 

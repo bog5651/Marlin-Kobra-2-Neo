@@ -1823,6 +1823,7 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
 #if HAS_DISPLAY
 
   void MarlinUI::abort_print() {
+    pause_pending = false;
     #if HAS_MEDIA
       marlin.end_waiting();
       if (card.isStillPrinting())
@@ -1868,6 +1869,8 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
    *   - For a host-only printer tell the host to pause the print in progress.
    */
   void MarlinUI::pause_print() {
+    if (pause_pending || printingIsPaused() || did_pause_print) return; // Pause already active or requested
+    pause_pending = true;
     #if HAS_MARLINUI_MENU
       synchronize(GET_TEXT_F(MSG_PAUSING));
       defer_status_screen();
@@ -1890,6 +1893,7 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
   }
 
   void MarlinUI::resume_print() {
+    pause_pending = false;
     reset_status();
     TERN_(PARK_HEAD_ON_PAUSE, marlin.end_waiting());
     TERN_(HAS_MEDIA, if (card.isPaused()) queue.inject_P(M24_STR));
