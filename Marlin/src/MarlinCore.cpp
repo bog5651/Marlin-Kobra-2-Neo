@@ -921,6 +921,9 @@ void Marlin::idle(const bool no_stepper_sleep/*=false*/) {
  * After this the machine will need to be reset.
  */
 void Marlin::kill(FSTR_P const lcd_error/*=nullptr*/, FSTR_P const lcd_component/*=nullptr*/, const bool steppers_off/*=false*/) {
+  #if PIN_EXISTS(POWER_CTRL)
+    WRITE(POWER_CTRL_PIN, LOW);             // Anycubic: cut heater power on fatal error
+  #endif
   thermalManager.disable_all_heaters();
 
   TERN_(HAS_CUTTER, cutter.kill()); // Full cutter shutdown including ISR control
