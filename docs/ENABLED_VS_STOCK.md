@@ -53,6 +53,9 @@
 | Advance K | More Config | правка Linear Advance K (пишется в EEPROM) |
 | Mesh Viewer | More Config | **новый** экран порта: heatmap сетки 7×7 (BILINEAR) |
 
+Все редактируемые значения (PID, Advance K, Input Shaping, пресеты)
+сохраняются в EEPROM только через **Store Settings** (`M500`).
+
 ## 3. Что НЕ является дополнительно включённой фичей
 
 Чтобы список был исчерпывающим — эти пункты проверены и добавлениями не являются:

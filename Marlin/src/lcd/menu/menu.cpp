@@ -963,8 +963,8 @@ void menu_about(){
 void menu_mesh_view() {
   ui.defer_status_screen();
   if (ui.should_draw()) {
-    constexpr uint8_t cell = 26;
-    constexpr int16_t gx = (TFT_WIDTH - (GRID_MAX_POINTS_X) * cell) / 2,
+    constexpr uint8_t cell = _MIN(_MIN(26, (TFT_WIDTH - 60) / (GRID_MAX_POINTS_X)), (TFT_HEIGHT - 56) / (GRID_MAX_POINTS_Y));
+    constexpr int16_t gx = 50 + _MAX(0, (TFT_WIDTH - 50 - (GRID_MAX_POINTS_X) * cell) / 2),
                       gy = 30;
     tft.canvas(0, 4, TFT_WIDTH, 24);
     tft.set_background(COLOR_BACKGROUND);
@@ -977,14 +977,18 @@ void menu_mesh_view() {
       tft.set_background(COLOR_BACKGROUND);
       tft_string.set(GET_TEXT_F(MSG_NO_VALID_MESH));
       tft_string.trim();
-      tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_MENU_VALUE, tft_string);
+      tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_YELLOW, tft_string);
     }
     else {
       float zmin = 0, zmax = 0;
+      bool have_z = false;
       for (uint8_t x = 0; x < GRID_MAX_POINTS_X; ++x)
         for (uint8_t y = 0; y < GRID_MAX_POINTS_Y; ++y) {
           const float z = bedlevel.z_values[x][y];
-          if (!isnan(z)) { if (z < zmin) zmin = z; if (z > zmax) zmax = z; }
+          if (!isnan(z)) {
+            if (!have_z) { zmin = zmax = z; have_z = true; }
+            else { if (z < zmin) zmin = z; if (z > zmax) zmax = z; }
+          }
         }
 
       tft.canvas(gx, gy, (GRID_MAX_POINTS_X) * cell + 1, (GRID_MAX_POINTS_Y) * cell + 1);
@@ -1004,15 +1008,22 @@ void menu_mesh_view() {
 
       tft.canvas(0, gy + (GRID_MAX_POINTS_Y) * cell + 6, TFT_WIDTH, 20);
       tft.set_background(COLOR_BACKGROUND);
-      tft_string.set(F("min "));
-      tft_string.add(ftostr43sign(zmin));
-      tft_string.add(F("  max "));
-      tft_string.add(ftostr43sign(zmax));
+      if (have_z) {
+        tft_string.set(F("min "));
+        tft_string.add(ftostr43sign(zmin));
+        tft_string.add(F("  max "));
+        tft_string.add(ftostr43sign(zmax));
+      }
+      else
+        tft_string.set(F("-----"));
       tft_string.trim();
       tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_MENU_VALUE, tft_string);
     }
   }
-  if (ui.use_click()) ui.goto_previous_screen();
+  if (ui.use_click()) {
+    ui.goto_previous_screen();
+    ui.previous_callbackFunc();
+  }
 }
 #endif
 

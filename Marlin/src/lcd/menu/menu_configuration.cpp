@@ -69,7 +69,7 @@
 #define HAS_DEBUG_MENU ENABLED(LCD_PROGRESS_BAR_TEST)
 
 void menu_advanced_settings();
-#if ENABLED(SHAPING_MENU)
+#if ENABLED(SHAPING_MENU) && DISABLED(SLIM_LCD_MENUS)
   void menu_advanced_input_shaping();
 #endif
 #if ANY(DELTA_CALIBRATION_MENU, DELTA_AUTO_CALIBRATION)
@@ -619,7 +619,7 @@ void menu_configuration() {
     SUBMENU(MSG_MESH_VIEWER, menu_mesh_view);
   #endif
   
-  #if ENABLED(SHAPING_MENU)
+  #if ENABLED(SHAPING_MENU) && DISABLED(SLIM_LCD_MENUS)
     if (!busy) SUBMENU(MSG_INPUT_SHAPING, menu_advanced_input_shaping);
   #endif
 
