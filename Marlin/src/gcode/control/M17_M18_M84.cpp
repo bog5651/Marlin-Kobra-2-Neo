@@ -247,5 +247,6 @@ void GcodeSuite::M18_M84() {
       planner.finish_and_disable();
 
     TERN_(AUTO_BED_LEVELING_UBL, bedlevel.steppers_were_disabled());
+    set_all_unhomed();
   }
 }
