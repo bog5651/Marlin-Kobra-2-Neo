@@ -28,6 +28,10 @@
 #include "../../module/planner.h"
 #include "../../module/stepper.h" // for various
 
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../../HAL/STM32/autoGetZoffset.h"
+#endif
+
 #if HAS_HOMING_CURRENT
   #include "../../module/motion.h" // for set/restore_homing_current
 #endif
@@ -142,6 +146,12 @@
       TERN_(DUAL_X_CARRIAGE, idex_set_parked(false));
 
       TERN_(SENSORLESS_HOMING, safe_delay(500)); // Short delay needed to settle
+
+      #if ENABLED(LEVEING_CALIBRATION_MODULE)
+        thermalManager.set_fan_speed(0, 0);
+        destination.x = NOZZLE_X - probe.offset_xy.x;     // stock: home Z over the calibration module
+        destination.y = Y_BED_SIZE - probe.offset_xy.y;
+      #endif
 
       do_blocking_move_to_xy(destination);
       homeaxis(Z_AXIS);
