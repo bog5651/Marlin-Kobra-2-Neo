@@ -46,12 +46,12 @@ the factory firmware.
 7. **Включено сверх завода.** `ENABLE_LEVELING_FADE_HEIGHT`,
    `SDCARD_SORT_ALPHA`, `SCROLL_LONG_FILENAMES`, `G26_MESH_VALIDATION`,
    `EMERGENCY_PARSER`, `HOST_ACTION_COMMANDS`/`HOST_PROMPT_SUPPORT`,
-   `MEATPACK_ON_SERIAL_PORT_1`, `PID_EDIT_MENU`/`PID_AUTOTUNE_MENU`;
-   восстановлены пункты меню Store/Load Settings, Power Outage, Preheat,
-   Advanced Settings и добавлен экран Mesh Viewer (сетка 7×7); дёргание
-   part-fan вокруг проб вынесено в опцию `PROBING_PART_COOLING_FAN`.
-   Полный список с методикой проверки —
-   [`docs/ENABLED_VS_STOCK.md`](docs/ENABLED_VS_STOCK.md).
+   `MEATPACK_ON_SERIAL_PORT_1`, `PID_EDIT_MENU`/`PID_AUTOTUNE_MENU`,
+   `SHAPING_MENU`; восстановлены пункты меню Store/Load Settings,
+   Power Outage, Preheat, Advanced Settings, Input Shaping и Advance K,
+   добавлен экран Mesh Viewer (сетка 7×7); дёргание part-fan вокруг проб
+   вынесено в опцию `PROBING_PART_COOLING_FAN`. Полный список с методикой
+   проверки — [`docs/ENABLED_VS_STOCK.md`](docs/ENABLED_VS_STOCK.md).
 
 ## Что намеренно не перенесено с завода
 
@@ -87,11 +87,12 @@ pio run -e ac_tri_f1
 
 ## Статус
 
-- Сборка `ac_tri_f1`: **SUCCESS**, Flash 401 352 / 481 280 (83.4%),
+- Сборка `ac_tri_f1`: **SUCCESS**, Flash 404 216 / 481 280 (84.0%),
   RAM 37 012 / 65 536 (56.5%).
 - UI quick wins (Store/Load Settings, Power Outage, Preheat, Advanced
-  Settings с PID-тюном, экран Mesh Viewer) собраны; ждут проверки на
-  принтере; чек-лист приёмки — в документации проекта.
+  Settings с PID-тюном, Input Shaping, Advance K, экран Mesh Viewer)
+  собраны; ждут проверки на принтере; чек-лист приёмки — в документации
+  проекта.
 
 ---
 

@@ -140,6 +140,9 @@
 #include "../../core/debug_out.h"
 
 void menu_advanced_settings();
+#if ENABLED(SHAPING_MENU)
+  void menu_advanced_input_shaping();
+#endif
 #if ANY(DELTA_CALIBRATION_MENU, DELTA_AUTO_CALIBRATION)
   void menu_delta_calibrate();
 #endif
