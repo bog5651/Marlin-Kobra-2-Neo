@@ -281,20 +281,14 @@ bool load_filament(const_float_t slow_load_length/*=0*/, const_float_t fast_load
 
       #if M600_PURGE_MORE_RESUMABLE
         if (show_lcd) {
-          // Show "Purge More" / "Resume" menu and wait for reply
+          // The custom TFT has no "Purge More" screen, so never wait for a reply (stock behavior).
           KEEPALIVE_STATE(PAUSED_FOR_USER);
           wait_for_user = false;
-          #if ANY(HAS_MARLINUI_MENU, DWIN_LCD_PROUI)
-            ui.pause_show_message(PAUSE_MESSAGE_OPTION); // Also sets PAUSE_RESPONSE_WAIT_FOR
-          #else
-            pause_menu_response = PAUSE_RESPONSE_WAIT_FOR;
-          #endif
-          while (pause_menu_response == PAUSE_RESPONSE_WAIT_FOR) idle_no_sleep();
         }
       #endif
 
       // Keep looping if "Purge More" was selected
-    } while (TERN0(M600_PURGE_MORE_RESUMABLE, pause_menu_response == PAUSE_RESPONSE_EXTRUDE_MORE));
+    } while (0);
 
   #endif
   TERN_(HOST_PROMPT_SUPPORT, hostui.prompt_end());
