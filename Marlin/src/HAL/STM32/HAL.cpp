@@ -53,8 +53,6 @@
 // ------------------------
 
 uint16_t MarlinHAL::adc_result;
-ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
 
 // ------------------------
 // Public functions

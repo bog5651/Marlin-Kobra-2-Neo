@@ -1878,7 +1878,6 @@ bool Planner::_buffer_steps(const xyze_long_t &target
  *
  * @return  true if movement is acceptable, false otherwise
  */
-uint8_t steps_dir = false;
 bool Planner::_populate_block(
   block_t * const block,
   const abce_long_t &target
@@ -1898,13 +1897,6 @@ bool Planner::_populate_block(
     dv = target.v - position.v,
     dw = target.w - position.w
   );
-  // SERIAL_ECHOLNPGM( 
-  //   "  _populate_block FR:", fr_mm_s,
-  //   " A:", target.a, " (", da, " steps)",
-  //   " B:", target.b, " (", db, " steps)",
-  //   " C:", target.c, " (", dc, " steps)"
-  // );
-
 
   /* <-- add a slash to enable
     SERIAL_ECHOLNPGM(
