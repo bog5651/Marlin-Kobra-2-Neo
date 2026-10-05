@@ -73,6 +73,7 @@ bool MarlinUI::clear_all = 0;
 bool MarlinUI::module_calibration_flag = false;
 float MarlinUI::temp_probe_zoffset;
 bool MarlinUI::print_task_done = false;
+bool MarlinUI::pause_pending = false;
 bool MarlinUI::fresh_flag = false;
 bool MarlinUI::real_duration_state;
 
@@ -709,11 +710,7 @@ void MarlinUI::init() {
 				  if(busy || Paused )
 				  {
 
-					  if(!Paused && IS_SD_PRINTING()){
-						return goto_screen(tft_pause_print);
-					  }
-
-					  else
+					  if(wait_for_user || Paused || did_pause_print)
 					  {
 						 if(READ(FIL_RUNOUT_PIN) != runout.get_state_original()){
 							  return goto_screen(runout_sensor);
@@ -722,10 +719,12 @@ void MarlinUI::init() {
 						else{
 						  ui.clear_all = false;
 						  runout.filament_ran_out = false;
-						  wait_for_user = false;
+						  ui.resume_print();                 // Clear the wait and continue the print
 						}
 					  	
 					  }
+					  else if(!ui.pause_pending)
+						return goto_screen(tft_pause_print);
 				  }
 				  else
 				  {
@@ -1791,6 +1790,7 @@ void MarlinUI::init() {
   #endif
 
   void MarlinUI::abort_print() {
+    pause_pending = false;
     #if HAS_MEDIA
       wait_for_heatup = wait_for_user = false;
       card.abortFilePrintSoon();
@@ -1828,6 +1828,8 @@ void MarlinUI::init() {
   #endif
 
   void MarlinUI::pause_print() {
+    if (pause_pending || printingIsPaused() || did_pause_print) return; // Pause already active or requested
+    pause_pending = true;
     #if HAS_MARLINUI_MENU
 	  ui.clear_all = true;
  	  if(print_job_timer.duration() >2){
@@ -1856,6 +1858,7 @@ void MarlinUI::init() {
   }
 
   void MarlinUI::resume_print() {
+    pause_pending = false;
     reset_status();
     TERN_(PARK_HEAD_ON_PAUSE, wait_for_heatup = wait_for_user = false);
     TERN_(HAS_MEDIA, if (IS_SD_PAUSED()) queue.inject_P(M24_STR));
@@ -1969,6 +1972,9 @@ void MarlinUI::init() {
             ui.seclect = 2;
             print_job_timer.stop();//removed tf_card When Paused
             card.flag.abort_sd_printing = true; //removed tf_card When Paused
+            wait_for_user = wait_for_heatup = false; // Don't leave the UI waiting for a user click
+            did_pause_print = 0;
+            ui.pause_pending = false;
 			      ui.clear_all = ui.start_print_status = false; 
             goto_screen(sd_card_removed);
           }

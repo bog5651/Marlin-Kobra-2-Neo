@@ -376,6 +376,8 @@ void startOrResumeJob() {
     TERN(HAS_CUTTER, cutter.kill(), thermalManager.zero_fan_speeds()); // Full cutter shutdown including ISR control
 
     wait_for_heatup = false;
+    TERN_(HAS_RESUME_CONTINUE, wait_for_user = false);
+    ui.pause_pending = false;
 
     TERN_(POWER_LOSS_RECOVERY, recovery.purge());
 

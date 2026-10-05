@@ -65,6 +65,7 @@ inline void sdcard_start_selected_file() {
   ui.real_duration_state = false;
   runout.filament_ran_out = false;//Clear status each time you print
   ui.start_print_status = true;
+  ui.pause_pending = false;
   card.openAndPrintFile(card.filename);
   ui.clear_all = true;
   ui.return_to_status();

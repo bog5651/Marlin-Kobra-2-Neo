@@ -823,6 +823,7 @@ public:
   static uint16_t seclect;
   static bool start_print_status;
   static bool print_task_done;
+  static bool pause_pending;    // A pause/resume request is queued but not yet executed
 private:
   #if HAS_SCREEN_TIMEOUT
     static millis_t return_to_status_ms;

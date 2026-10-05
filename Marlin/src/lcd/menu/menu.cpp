@@ -32,6 +32,11 @@
 #include "../../module/temperature.h"
 #include "../../gcode/queue.h"
 #include "../tft/tft.h"
+#include "../../MarlinCore.h" // for printingIsPaused, wait_for_user
+
+#if ENABLED(ADVANCED_PAUSE_FEATURE)
+  #include "../../feature/pause.h" // for did_pause_print
+#endif
 
 #if HAS_SOUND
   #include "../../libs/buzzer.h"
@@ -800,13 +805,13 @@ void tft_pause_print()
 	  
     if (got_click) {
 	  	ui.confirm_windown_enabled = false;
-		  selectFunc_t callFunc = !ui_selection ? ui.pause_print :  ui.return_to_status;
-		  if (callFunc) {
-		  	callFunc();
-			//ui.goto_previous_screen();
-		  } 
-		  else 
-		  	ui.goto_previous_screen();
+	  	ui.return_to_status();                     // Leave the dialog so it cannot re-queue commands
+	  	if (!ui_selection) {                       // First button pressed
+	  	  if (wait_for_user || printingIsPaused() || did_pause_print)
+	  	    ui.resume_print();                     // Already paused or waiting: continue the print
+	  	  else if (!ui.pause_pending)
+	  	    ui.pause_print();                      // Otherwise request a pause
+	  	}
 	  }
 	  
 	}
@@ -965,6 +970,9 @@ void sd_card_removed(){
   SERIAL_ECHOLNPGM("sd_card_removed");
   if(ui.use_click()){
 	  ui.start_print_status = false;
+	  ui.print_task_done = false;
+	  wait_for_user = wait_for_heatup = false;
+	  did_pause_print = 0;
     return ui.return_to_status();
   }
 

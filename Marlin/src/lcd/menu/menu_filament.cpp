@@ -353,6 +353,7 @@ void MarlinUI::pause_show_message(
 }
 
 void MarlinUI::pausu_befor_event(){
+	pause_pending = false; // The requested pause is now active
 	if(runout.filament_ran_out){
       ui.goto_screen(runout_sensor);
 	}
