@@ -748,7 +748,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
 
     // Attempt to tare the probe
     if (TERN0(PROBE_TARE, tare())) return NAN;
-    thermalManager.set_fan_speed(0, 0);
+    TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
     // Do a first probe at the fast speed
     if (try_to_probe(PSTR("FAST"), z_probe_low_point, z_probe_fast_mm_s,
                      sanity_check, Z_CLEARANCE_BETWEEN_PROBES) ) return NAN;
@@ -792,7 +792,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     {
       // If the probe won't tare, return
       if (TERN0(PROBE_TARE, tare())) return true;
-      thermalManager.set_fan_speed(0, 0);
+      TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
       // Probe downward slowly to find the bed
       if (try_to_probe(PSTR("SLOW"), z_probe_low_point, MMM_TO_MMS(Z_PROBE_FEEDRATE_SLOW),
                        sanity_check, Z_CLEARANCE_BETWEEN_PROBES) ) return NAN;
@@ -864,7 +864,7 @@ float Probe::run_z_probe(const bool sanity_check/*=true*/) {
     if (ABS(z2 - z1) >= z_probe_diff) {
       do_blocking_move_to_z(current_position.z + Z_CLEARANCE_MULTI_PROBE, z_probe_fast_mm_s);
       if (TERN0(PROBE_TARE, tare())) return NAN;
-      thermalManager.set_fan_speed(0, 0);
+      TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
       if (try_to_probe(PSTR("EXTRA"), z_probe_low_point, z_probe_fast_mm_s,
                        sanity_check, Z_CLEARANCE_BETWEEN_PROBES) ) return NAN;
       const float z3 = current_position.z;
@@ -938,12 +938,11 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
 
   if (probe_relative) npos -= offset_xy;  // Get the nozzle position
 
-  thermalManager.set_fan_speed(0, 255);
+  TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 255));
   // Move the probe to the starting XYZ
   do_blocking_move_to(npos, feedRate_t(XY_PROBE_FEEDRATE_MM_S));
 
-
-  thermalManager.set_fan_speed(0, 0);
+  TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 0));
 
   #if ENABLED(BD_SENSOR)
     return current_position.z - bdl.read(); // Difference between Z-home-relative Z and sensor reading
@@ -956,7 +955,7 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
     TERN_(X_AXIS_TWIST_COMPENSATION, measured_z += xatc.compensation(npos + offset_xy));
   }
   if (!isnan(measured_z)) {
-    thermalManager.set_fan_speed(0, 255);
+    TERN_(PROBING_PART_COOLING_FAN, thermalManager.set_fan_speed(0, 255));
     if (raise_after == PROBE_PT_RAISE)
       do_blocking_move_to_z(current_position.z + Z_CLEARANCE_BETWEEN_PROBES, z_probe_fast_mm_s);
     else if (raise_after == PROBE_PT_STOW || raise_after == PROBE_PT_LAST_STOW)
