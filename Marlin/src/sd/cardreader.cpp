@@ -619,6 +619,7 @@ void CardReader::manage_media() {
           else if (vadd & INSERT_USB) selectMediaFlashDrive();
         #endif
       #endif
+      hal.watchdog_refresh();           // The settle delay may be long on slow cards
       safe_delay(500);                  // Time for inserted media to settle. May re-enter for multiple media?
       mount();
     }
@@ -689,6 +690,8 @@ void CardReader::release() {
   else
     endFilePrintNow();
 
+  marlin.end_waiting(); // Cancel any pending wait
+
   flag.mounted = false;
   flag.workDirIsRoot = true;
   nrItems = -1;
@@ -730,6 +733,7 @@ void CardReader::endFilePrintNow(TERN_(SD_RESORT, const bool re_sort/*=false*/))
   TERN_(ADVANCED_PAUSE_FEATURE, did_pause_print = 0);
   TERN_(DWIN_CREALITY_LCD, hmiFlag.print_finish = flag.sdprinting);
   flag.abort_sd_printing = false;
+  marlin.end_waiting(); // Don't keep waiting after the card is gone
   if (isFileOpen()) myfile.close();
   TERN_(SD_RESORT, if (re_sort) presort());
 }
