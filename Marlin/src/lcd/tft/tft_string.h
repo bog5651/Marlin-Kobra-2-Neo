@@ -77,7 +77,29 @@
 #define LCODE_zh_CN   _SIMPLIFIED_CHINESE
 #define LCODE_zh_TW   _TRADITIONAL_CHINESE
 
-#define _LCODE(N) (CAT(LCODE_, LCD_LANGUAGE) == N)
+// Extra glyphs are required if ANY enabled UI language uses a non-Latin script
+#define _LCODE1(N) (CAT(LCODE_, LCD_LANGUAGE) == N)
+#ifdef LCD_LANGUAGE_2
+  #define _LCODE2(N) (CAT(LCODE_, LCD_LANGUAGE_2) == N)
+#else
+  #define _LCODE2(N) 0
+#endif
+#ifdef LCD_LANGUAGE_3
+  #define _LCODE3(N) (CAT(LCODE_, LCD_LANGUAGE_3) == N)
+#else
+  #define _LCODE3(N) 0
+#endif
+#ifdef LCD_LANGUAGE_4
+  #define _LCODE4(N) (CAT(LCODE_, LCD_LANGUAGE_4) == N)
+#else
+  #define _LCODE4(N) 0
+#endif
+#ifdef LCD_LANGUAGE_5
+  #define _LCODE5(N) (CAT(LCODE_, LCD_LANGUAGE_5) == N)
+#else
+  #define _LCODE5(N) 0
+#endif
+#define _LCODE(N) (_LCODE1(N) || _LCODE2(N) || _LCODE3(N) || _LCODE4(N) || _LCODE5(N))
 
 #if _LCODE(_LATIN_EXTENDED_A)
   #define FONT_EXTRA    Latin_Extended_A
@@ -85,6 +107,7 @@
 #elif _LCODE(_CYRILLIC)
   #define FONT_EXTRA    Cyrillic
   #define EXTRA_GLYPHS  145
+  #define CYRILLIC_EXTRA 1
 #elif _LCODE(_GREEK)
   #define FONT_EXTRA    Greek
   #define EXTRA_GLYPHS  73
@@ -108,6 +131,11 @@
 #endif
 
 #undef _LCODE
+#undef _LCODE1
+#undef _LCODE2
+#undef _LCODE3
+#undef _LCODE4
+#undef _LCODE5
 #undef LCODE_cz
 #undef LCODE_hr
 #undef LCODE_pl
@@ -138,8 +166,8 @@
   #define FONT_FAMILY       Unifont
 #elif TFT_FONT == HELVETICA
   #define FONT_FAMILY       Helvetica
-  #ifdef FONT_EXTRA
-    #error "Helvetica font does not have symbols required for selected LCD_LANGUAGE."
+  #if defined(FONT_EXTRA) && !defined(CYRILLIC_EXTRA)
+    #error "Helvetica font only has a Cyrillic companion font available."
   #endif
 #else
   #error "Invalid TFT_FONT value."
@@ -199,8 +227,8 @@ class TFT_String {
     static uint16_t font_ascent() { return font_header->FontAscent; }
     static uint16_t font_height() { return font_header->FontAscent - font_header->FontDescent; }
 
-    static glyph_t *glyph(uint16_t character);
-    static glyph_t *glyph(uint16_t *character) { return glyph(*character); }
+    static glyph_t *glyph(uint16_t character, uint8_t *fontType=nullptr);
+    static glyph_t *glyph(uint16_t *character, uint8_t *fontType=nullptr) { return glyph(*character, fontType); }
 
     /**
      * @brief Set the string empty

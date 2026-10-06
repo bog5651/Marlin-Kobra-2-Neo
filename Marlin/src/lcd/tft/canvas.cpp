@@ -73,17 +73,22 @@ void CANVAS::AddText(uint16_t x, uint16_t y, uint16_t color, uint16_t *string, u
   if (maxWidth == 0) maxWidth = width - x;
 
   uint16_t colors[16];
+  bool colors_ready = false;          // 2bpp colors depend only on text/background
   uint16_t stringWidth = 0;
   for (uint16_t i = 0 ; *(string + i) ; i++) {
-    glyph_t *glyph = Glyph(string + i);
+    uint8_t glyphType;
+    glyph_t *glyph = Glyph(string + i, &glyphType);
     if (stringWidth + glyph->BBXWidth > maxWidth) break;
-    switch (GetFontType()) {
+    switch (glyphType) {
       case FONT_MARLIN_GLYPHS_1BPP:
         AddImage(x + stringWidth + glyph->BBXOffsetX, y + GetFontAscent() - glyph->BBXHeight - glyph->BBXOffsetY, glyph->BBXWidth, glyph->BBXHeight, GREYSCALE1, ((uint8_t *)glyph) + sizeof(glyph_t), &color);
         break;
       case FONT_MARLIN_GLYPHS_2BPP:
-        for (uint8_t i = 0; i < 3; i++)
-          colors[i] = gradient(color, background_color, ((i+1) << 8) / 3);
+        if (!colors_ready) {
+          for (uint8_t j = 0; j < 3; j++)
+            colors[j] = gradient(color, background_color, ((j+1) << 8) / 3);
+          colors_ready = true;
+        }
         AddImage(x + stringWidth + glyph->BBXOffsetX, y + GetFontAscent() - glyph->BBXHeight - glyph->BBXOffsetY, glyph->BBXWidth, glyph->BBXHeight, GREYSCALE2, ((uint8_t *)glyph) + sizeof(glyph_t), colors);
         break;
     }

@@ -33,7 +33,12 @@ extern const uint8_t MENU_FONT_NAME[];
 extern const uint8_t SYMBOLS_FONT_NAME[];
 
 #ifdef FONT_EXTRA
-  #define EXTRA_FONT_NAME   JOIN(FONT_FAMILY, JOIN(_, FONT_EXTRA, _), FONT_SIZE)
+  #if TFT_FONT == HELVETICA
+    // The Helvetica UI pairs with a 14px Cyrillic companion font (2bpp)
+    #define EXTRA_FONT_NAME   NotoSans_Medium_Cyrillic_14
+  #else
+    #define EXTRA_FONT_NAME   JOIN(FONT_FAMILY, JOIN(_, FONT_EXTRA, _), FONT_SIZE)
+  #endif
   extern const uint8_t EXTRA_FONT_NAME[];
 #endif
 

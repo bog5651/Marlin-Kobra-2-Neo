@@ -122,50 +122,79 @@ void TFT_String::add_glyphs(const uint8_t *font) {
   #endif
 }
 
-glyph_t *TFT_String::glyph(uint16_t character) {
+glyph_t *TFT_String::glyph(uint16_t character, uint8_t *fontType/*=nullptr*/) {
   if (character == 0x2026) character = 0x0a;  /* character 0x2026 "…" is remaped to 0x0a and should be part of symbols font */
-  if (character < 0x00ff) return glyphs[character] ?: glyphs['?'];    /* Use '?' for unknown glyphs */
 
   #if EXTRA_GLYPHS
-    if (font_header_extra == nullptr || character < font_header_extra->FontStartEncoding || character > font_header_extra->FontEndEncoding) return glyphs['?'];
-
-    if ((font_header_extra->Format & 0xF0) == FONT_MARLIN_GLYPHS) {
-      if (glyphs_extra[character - font_header_extra->FontStartEncoding])
-        return (glyph_t *)glyphs_extra[character - font_header_extra->FontStartEncoding];
-    }
-    else {
-      #if 0
-        // Slow search method that that does not care if glyphs are ordered by unicode
-        for (uint16_t i = 0; i < extra_count; i++) {
-          if (character == ((uniglyph_t *)glyphs_extra[i])->unicode)
-            return &(((uniglyph_t *)glyphs_extra[i])->glyph);
-        }
-      #else
-        // Fast search method that REQUIRES glyphs to be ordered by unicode
-        uint16_t min = 0, max = extra_count-1, next = extra_count/2;
-        /**
-         * while() condition check has to be at the end of the loop to support fonts with single glyph
-         * Technically it is not a error and it causes no harm, so let it be
-         */
-        do {
-          uint16_t unicode = ((uniglyph_t *)glyphs_extra[next])->unicode;
-          if (character == unicode)
-            return &(((uniglyph_t *)glyphs_extra[next])->glyph);
-
-          if (character > unicode) {
-            if (next == min) break;
-            min = next;
-            next = (min + max + 1) / 2;
-          }
-          else {
-            max = next;
-            next = (min + max) / 2;
-          }
-        } while (min < max);
-      #endif
+    // One-entry cache for extra glyphs, which are found with a binary search
+    static uint16_t last_extra_character = 0;
+    static unifont_t *last_extra_font = nullptr;
+    static glyph_t *last_extra_glyph = nullptr;
+    static uint8_t last_extra_type = 0;
+    if (last_extra_glyph && character == last_extra_character && last_extra_font == font_header_extra) {
+      if (fontType) *fontType = last_extra_type;
+      return last_extra_glyph;
     }
   #endif
 
+  if (character < 0x00ff) {
+    if (fontType) *fontType = font_header->Format;
+    return glyphs[character] ?: glyphs['?'];    /* Use '?' for unknown glyphs */
+  }
+
+  #if EXTRA_GLYPHS
+    if (font_header_extra != nullptr && character >= font_header_extra->FontStartEncoding && character <= font_header_extra->FontEndEncoding) {
+      if ((font_header_extra->Format & 0xF0) == FONT_MARLIN_GLYPHS) {
+        if (glyphs_extra[character - font_header_extra->FontStartEncoding]) {
+          last_extra_character = character;
+          last_extra_font = font_header_extra;
+          last_extra_glyph = (glyph_t *)glyphs_extra[character - font_header_extra->FontStartEncoding];
+          last_extra_type = font_header_extra->Format;
+          if (fontType) *fontType = last_extra_type;
+          return last_extra_glyph;
+        }
+      }
+      else {
+        #if 0
+          // Slow search method that that does not care if glyphs are ordered by unicode
+          for (uint16_t i = 0; i < extra_count; i++) {
+            if (character == ((uniglyph_t *)glyphs_extra[i])->unicode)
+              return &(((uniglyph_t *)glyphs_extra[i])->glyph);
+          }
+        #else
+          // Fast search method that REQUIRES glyphs to be ordered by unicode
+          uint16_t min = 0, max = extra_count-1, next = extra_count/2;
+          /**
+           * while() condition check has to be at the end of the loop to support fonts with single glyph
+           * Technically it is not a error and it causes no harm, so let it be
+           */
+          do {
+            uint16_t unicode = ((uniglyph_t *)glyphs_extra[next])->unicode;
+            if (character == unicode) {
+              last_extra_character = character;
+              last_extra_font = font_header_extra;
+              last_extra_glyph = &(((uniglyph_t *)glyphs_extra[next])->glyph);
+              last_extra_type = font_header_extra->Format;
+              if (fontType) *fontType = last_extra_type;
+              return last_extra_glyph;
+            }
+
+            if (character > unicode) {
+              if (next == min) break;
+              min = next;
+              next = (min + max + 1) / 2;
+            }
+            else {
+              max = next;
+              next = (min + max) / 2;
+            }
+          } while (min < max);
+        #endif
+      }
+    }
+  #endif
+
+  if (fontType) *fontType = font_header->Format;
   return glyphs['?'];
 }
 

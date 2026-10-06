@@ -84,31 +84,25 @@ void MarlinUI::tft_idle() {
   void TFT::show_ancubic_log(){
 
     set_window(0,0,320,240);
-	io.DataTransferBegin();
-    // write_multiple(0x1234,76800);
-    // //tft.queue.sync();
-    // while (1)
-    // {
-    //   /* code */
-    // }
-    
-		uint8_t p;
-    uint8_t  R1,G1,V1; 
-		for(uint32_t i = 0;i<76800;i++)
-		{
-			p = _ac[i];
-      R1=GUI_COLOR_Colors4[p]>>16;
-      G1=(GUI_COLOR_Colors4[p]>>8)&0xff;
-      V1=(GUI_COLOR_Colors4[p])&0xFF;
-    
-      R1=R1>>3;
-      G1=G1>>2;
-      V1=V1>>3;
-			io.WriteData((V1<<11)+ (G1<<5)+R1);
-      p++;
-		}
-    //io.DataTransferEnd();
-	
+
+    // 3bpp decode straight into the canvas buffer and send in TFT_BUFFER_SIZE chunks
+    const uint8_t *src = _ac;
+    uint16_t *dst = buffer;
+    uint32_t acc = 0;
+    uint8_t bits = 0;
+    for (uint32_t i = 0; i < 76800; i++) {
+      while (bits < 3) { acc |= uint32_t(*src++) << bits; bits += 8; }
+      *dst++ = _ac_palette[acc & 0x07];
+      acc >>= 3;
+      bits -= 3;
+      if (dst == buffer + TFT_BUFFER_SIZE) {
+        io.WriteSequence(buffer, TFT_BUFFER_SIZE);
+        dst = buffer;
+      }
+    }
+    if (dst != buffer) io.WriteSequence(buffer, uint16_t(dst - buffer));
+    io.DataTransferEnd();
+
   }
   void MarlinUI::color_change(){
     tft.color_change();
@@ -757,14 +751,14 @@ void MenuEditItemBase::draw_edit_screen(FSTR_P const fstr, const char * const va
   menu_line(line++);
   tft_string.set(fstr, itemIndex, itemStringC, itemStringF);
   tft_string.trim();
-  tft.add_text(tft_string.center(TFT_WIDTH-50), MENU_TEXT_Y_OFFSET, COLOR_MENU_TEXT, tft_string);
+  tft.add_text(tft_string.center(TFT_WIDTH), MENU_TEXT_Y_OFFSET, COLOR_MENU_TEXT, tft_string);
 
   TERN_(AUTO_BED_LEVELING_UBL, if (ui.external_control) line++);  // ftostr52() will overwrite *value so *value has to be displayed first
 
   menu_line(line);
   tft_string.set(value);
   tft_string.trim();
-  tft.add_text(tft_string.center(TFT_WIDTH-50), MENU_TEXT_Y_OFFSET, COLOR_MENU_VALUE, tft_string);
+  tft.add_text(tft_string.center(TFT_WIDTH), MENU_TEXT_Y_OFFSET, COLOR_MENU_VALUE, tft_string);
 
   #if ENABLED(AUTO_BED_LEVELING_UBL)
     if (ui.external_control) {
