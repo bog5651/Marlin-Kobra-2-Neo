@@ -37,6 +37,12 @@
 SPI_HandleTypeDef TFT_SPI::SPIx;
 DMA_HandleTypeDef TFT_SPI::DMAtx;
 
+#ifndef TFT_DMA_TIMEOUT_MS
+  #define TFT_DMA_TIMEOUT_MS 200   // Abort a stuck DMA transfer instead of hanging the UI
+#endif
+static uint32_t dma_start_ms;
+static bool dma_timeout_reported;
+
 void TFT_SPI::init() {
   SPI_TypeDef *spiInstance;
 
@@ -254,24 +260,33 @@ bool TFT_SPI::isBusy() {
 
   if (!__IS_DMA_CONFIGURED(&DMAtx)) return false;
 
+  bool busy;
   if (__HAL_DMA_GET_FLAG(&DMAtx, __HAL_DMA_GET_TE_FLAG_INDEX(&DMAtx))) {
-    // You should not be here - DMA transfer error flag is set
-    // Abort DMA transfer and release SPI
+    // DMA transfer error flag is set - abort and release SPI
+    busy = true;
   }
   else {
-    // Check if DMA transfer completed flag is set
-    if (__HAL_DMA_GET_FLAG(&DMAtx, __HAL_DMA_GET_TC_FLAG_INDEX(&DMAtx)) == 0) return true;
+    // Busy until DMA transfer completes and the SPI transmit buffer drains
     #ifdef STM32H7xx
-      // Check if SPI data transfer is completed
-      if (!__HAL_SPI_GET_FLAG(&SPIx, SPI_FLAG_EOT)) return true;
+      busy = __HAL_DMA_GET_FLAG(&DMAtx, __HAL_DMA_GET_TC_FLAG_INDEX(&DMAtx)) == 0
+          || !__HAL_SPI_GET_FLAG(&SPIx, SPI_FLAG_EOT);
     #else
-      // Check if SPI transmit butter is empty and SPI is idle
-      if ((!__HAL_SPI_GET_FLAG(&SPIx, SPI_FLAG_TXE)) || (__HAL_SPI_GET_FLAG(&SPIx, SPI_FLAG_BSY))) return true;
+      busy = __HAL_DMA_GET_FLAG(&DMAtx, __HAL_DMA_GET_TC_FLAG_INDEX(&DMAtx)) == 0
+          || !__HAL_SPI_GET_FLAG(&SPIx, SPI_FLAG_TXE)
+          ||  __HAL_SPI_GET_FLAG(&SPIx, SPI_FLAG_BSY);
     #endif
   }
 
+  if (busy && millis() - dma_start_ms >= TFT_DMA_TIMEOUT_MS) {
+    if (!dma_timeout_reported) { dma_timeout_reported = true; SERIAL_ECHOLNPGM("TFT DMA timeout"); }
+    abort();
+    return false;
+  }
+
+  if (busy) return true;
+
   abort();
-  return true;
+  return false;
 }
 
 void TFT_SPI::abort() {
@@ -337,6 +352,7 @@ void TFT_SPI::transmitDMA(uint32_t memoryIncrease, uint16_t *data, uint16_t coun
     SET_BIT(SPIx.Instance->CR2, SPI_CR2_TXDMAEN);   // Enable Tx DMA Request
   #endif
 
+  dma_start_ms = millis();
   TERN_(TFT_SHARED_IO, while (isBusy()));
 }
 
