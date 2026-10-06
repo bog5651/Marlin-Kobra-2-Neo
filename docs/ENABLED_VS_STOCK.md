@@ -51,7 +51,7 @@
 | Advanced Settings | More Config | дерево настроек Marlin: steps/mm, ускорения, PID, LA и т.д. |
 | Input Shaping | More Config | экран частот/демпфирования X/Y (upstream-меню) |
 | Advance K | More Config | правка Linear Advance K (пишется в EEPROM) |
-| Mesh Viewer | More Config | **новый** экран порта: heatmap сетки 7×7 (BILINEAR) |
+| Mesh Viewer | More Config | **новый** экран порта: сетка 7×7, рамка по отклонению + знак и значение в ячейке (BILINEAR) |
 
 Все редактируемые значения (PID, Advance K, Input Shaping, пресеты)
 сохраняются в EEPROM только через **Store Settings** (`M500`).
