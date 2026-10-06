@@ -333,9 +333,10 @@ void TFT_SPI::transmitDMA(uint32_t memoryIncrease, uint16_t *data, uint16_t coun
   DMAtx.Init.MemInc = memoryIncrease;
   HAL_DMA_Init(&DMAtx);
 
-  if (SPIx.Init.Direction == SPI_DIRECTION_1LINE) SPI_1LINE_TX(&SPIx);
-
   dataTransferBegin();
+
+  if (SPIx.Init.Direction == SPI_DIRECTION_1LINE)
+    SPI_1LINE_TX(&SPIx);   // Set after dataTransferBegin: HAL_SPI_Init overwrites CR1 and clears BIDIOE
 
   #ifdef STM32H7xx
     HAL_DMA_Start(&DMAtx, (uint32_t)data, (uint32_t)&(SPIx.Instance->TXDR), count);
@@ -375,9 +376,10 @@ void TFT_SPI::transmit(uint32_t memoryIncrease, uint16_t *data, uint16_t count) 
     DMAtx.Init.MemInc = memoryIncrease;
     HAL_DMA_Init(&DMAtx);
 
-    if (SPIx.Init.Direction == SPI_DIRECTION_1LINE) SPI_1LINE_TX(&SPIx);
-
     dataTransferBegin();
+
+    if (SPIx.Init.Direction == SPI_DIRECTION_1LINE)
+      SPI_1LINE_TX(&SPIx);   // Set after dataTransferBegin: HAL_SPI_Init overwrites CR1 and clears BIDIOE
 
     HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
