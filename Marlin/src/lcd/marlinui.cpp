@@ -453,12 +453,18 @@ void MarlinUI::init() {
     bool MarlinUI::pause_pending;
     bool MarlinUI::clear_all;
     bool MarlinUI::confirm_windown_enabled, MarlinUI::last_confirm_windown_enabled;
+    bool MarlinUI::module_calibration_flag;
+    bool MarlinUI::model_fan_enabled;
     bool MarlinUI::real_duration_state;
     float MarlinUI::temp_probe_zoffset;
     bool MarlinUI::fresh_flag;
 
     float MarlinUI::getzoffset() { return probe.offset.z; }
     void MarlinUI::setzoffset(const float value) { probe.offset.z = value; }
+
+    void MarlinUI::fan_callbackFunc() {
+      thermalManager.set_fan_speed(0, model_fan_enabled ? 255 : 0);
+    }
 
     void MarlinUI::back_callbackFunc() {
       #if ENABLED(LEVEING_CALIBRATION_MODULE)
@@ -1091,6 +1097,12 @@ void MarlinUI::init() {
       // Update button states for button_pressed(), etc.
       // If the state changes the next update may be delayed 300-500ms.
       update_buttons();
+
+      // Factory hooks (calibration fan, filament load/unload timeout)
+      #if ENABLED(LEVEING_CALIBRATION_MODULE)
+        autoProbe.fan_control();
+      #endif
+      unload_load_filament();
 
       // If the action button is pressed...
       static bool wait_for_unclick; // = false

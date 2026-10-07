@@ -30,10 +30,16 @@
 
 #include "menu_item.h"
 #include "../../module/temperature.h"
+#include "../../module/motion.h"
 #include "../../gcode/queue.h"
 #include "../../module/printcounter.h"
 #include "../../module/stepper.h"
 #include "../../sd/cardreader.h"
+#include "../../feature/pause.h"
+
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../../HAL/STM32/autoGetZoffset.h"
+#endif
 
 #if ENABLED(PSU_CONTROL)
   #include "../../feature/power.h"
@@ -245,338 +251,105 @@ void menu_configuration();
 
 #endif // CUSTOM_MENU_MAIN
 
-void menu_main() {
-  const bool busy = marlin.printingIsActive();
-  #if HAS_MEDIA
-    const bool card_is_mounted = card.isMounted(),
-               card_open = card_is_mounted && card.isFileOpen();
-  #endif
-
+void filament_change() {
   START_MENU();
-  BACK_ITEM(MSG_INFO_SCREEN);
+  BACK_ITEM(MSG_BACK);
+  SUBMENU(MSG_FILAMENTUNLOAD, []{ unloaOrloaddfilamentstate = true; filament_cmd = FILA_OUT; _menu_move_distance_e_maybe(); });
+  SUBMENU(MSG_FILAMENTLOAD, []{ unloaOrloaddfilamentstate = true; filament_cmd = FILA_IN; _menu_move_distance_e_maybe(); });
+  END_MENU();
+}
 
-  #if HAS_MEDIA && !defined(MEDIA_MENU_AT_TOP) && !HAS_MARLINUI_ENCODER
-    #define MEDIA_MENU_AT_TOP
-  #endif
+void move_calibration() {
+  if (!motion.axis_is_trusted(X_AXIS) || !motion.axis_is_trusted(Y_AXIS))
+    queue.inject_P(PSTR("G28\n M2000"));
+  else
+    queue.inject_P(PSTR("M2000"));
+  calibration_state = true;
+  LCD_MESSAGE(MSG_CALIBRATION_START);
+}
 
-  // Show "Attach" for drives that don't auto-detect media (yet)
-  //#define ATTACH_WITHOUT_INSERT_SD
-  #define ATTACH_WITHOUT_INSERT_USB
+void save_calibration() {
+  queue.inject_P(PSTR("M2003 W"));
+}
 
-  // Show all "inserted" drives and mount as-needed
-  #define SHOW_UNMOUNTED_DRIVES
+void menu_calibration() {
+  START_MENU();
+  BACK_ITEM(MSG_BACK);
+  ACTION_ITEM(MSG_POSITION_CALIBRATION, move_calibration);
+  ACTION_ITEM(MSG_BUTTON_SAVE, save_calibration);
 
-  /**
-   * Previously:
-   * - The "selected" media is mounted?
-   *   - [Run Auto Files]
-   *   - HAS_SD_DETECT:
-   *     - [Change Media] = M21 / M21S
-   *     - HAS_MULTI_VOLUME?
-   *       - [Attach USB Drive] = M21U
-   *   - ELSE:
-   *     - [Release Media] = M22
-   *   - [Select from Media] (or Password Gateway) >
-   *
-   * - The "selected" media is not mounted?
-   *   - HAS_SD_DETECT?
-   *     - [No Media] (does nothing)
-   *     - HAS_MULTI_VOLUME?
-   *       - [Attach SD Card] = M21S
-   *       - [Attach USB Drive] = M21U
-   *     - ELSE:
-   *       - [Attach Media] = M21
-   *
-   * Updated:
-   * - Something is mounted?
-   *   - [Run SD/USB Autofiles]
-   *   - [Release SD/USB] = M22
-   *   - [Select from SD/USB] (or Password Gateway) >
-   *
-   * - Something is inserted and SHOW_UNMOUNTED_DRIVES?
-   *   - [Select from SD/USB] (or Password Gateway) >
-   *
-   * - The "selected" Card is NOT DETECTED?
-   *   - Trust all media detect methods?
-   *     - [No Media] (does nothing)
-   *     - HAS_MULTI_VOLUME?
-   *       - [Attach SD Card] = M21S
-   *       - [Attach USB Drive] = M21U
-   *     - ELSE:
-   *       - [Attach SD Card/USB Drive] = M21
-   *
-   * Ideal:
-   * - Password Gateway?
-   *   - Use gateway passthroughs for all SD/USB Drive menu items...
-   *   - [Run SD Autofiles]
-   *   - [Run USB Autofiles]
-   *   - [Select from SD Card] (or Password Gateway) >
-   *   - [Select from USB Drive] (or Password Gateway) >
-   *   - [Eject SD Card/USB Drive]
-   */
-  auto media_menu_items = [&]{
-    #if HAS_MEDIA
-      if (card_open) return;
-
-      if (card_is_mounted) {
-        #if ENABLED(MENU_ADDAUTOSTART)
-          // [Run AutoFiles] for mounted drive(s)
-          if (card.isSDCardMounted())
-            ACTION_ITEM(MSG_RUN_AUTOFILES_SD, card.autofile_begin);
-          if (card.isFlashDriveMounted())
-            ACTION_ITEM(MSG_RUN_AUTOFILES_USB, card.autofile_begin);
-        #endif
-
-        #if ENABLED(TFT_COLOR_UI)
-          // Menu display issue on item removal with multi language selection menu
-          #define M22_ITEM(T) do{ \
-            ACTION_ITEM(T, []{ \
-              queue.inject(F("M22")); encoderTopLine -= (encoderTopLine > 0); ui.refresh(); \
-            }); \
-          }while(0)
-        #else
-          #define M22_ITEM(T) GCODES_ITEM(T, F("M22"))
-        #endif
-
-        // [Release Media] for mounted drive(s)
-        if (card.isSDCardMounted())
-          M22_ITEM(MSG_RELEASE_SD);
-        if (card.isFlashDriveMounted())
-          M22_ITEM(MSG_RELEASE_USB);
-
-        // [Select from SD/USB] (or Password First)
-        if (card.isSDCardMounted())
-          SUBMENU(MSG_MEDIA_MENU_SD, MEDIA_MENU_GATEWAY);
-        else if (TERN0(SHOW_UNMOUNTED_DRIVES, card.isSDCardInserted()))
-          SUBMENU(MSG_MEDIA_MENU_SD, MEDIA_MENU_GATEWAY_SD);
-
-        if (card.isFlashDriveMounted())
-          SUBMENU(MSG_MEDIA_MENU_USB, MEDIA_MENU_GATEWAY);
-        else if (TERN0(SHOW_UNMOUNTED_DRIVES, card.isFlashDriveInserted()))
-          SUBMENU(MSG_MEDIA_MENU_USB, MEDIA_MENU_GATEWAY_USB);
-      }
-      else {
-        // NOTE: If the SD Card has no SD_DETECT it will always appear to be "inserted"
-        const bool att_sd  = ENABLED(ATTACH_WITHOUT_INSERT_SD)  || card.isSDCardInserted(),
-                   att_usb = ENABLED(ATTACH_WITHOUT_INSERT_USB) || card.isFlashDriveInserted();
-        if (!att_sd && !att_usb) {
-          ACTION_ITEM(MSG_NO_MEDIA, nullptr);                 // [No Media]
-        }
-        else {
-          #if ENABLED(SHOW_UNMOUNTED_DRIVES)
-            // [Select from SD/USB] (or Password First)
-            if (card.isSDCardInserted())
-              SUBMENU(MSG_MEDIA_MENU_SD, MEDIA_MENU_GATEWAY_SD);
-            if (card.isFlashDriveInserted())
-              SUBMENU(MSG_MEDIA_MENU_USB, MEDIA_MENU_GATEWAY_USB);
-          #else
-            #define M21(T) F("M21" TERN_(HAS_MULTI_VOLUME, T))
-            if (att_sd)  GCODES_ITEM(MSG_ATTACH_SD,  M21("S")); // M21 S - [Attach SD Card]
-            if (att_usb) GCODES_ITEM(MSG_ATTACH_USB, M21("U")); // M21 U - [Attach USB Drive]
-          #endif
-        }
-      }
-    #endif // HAS_MEDIA
-  };
-
-  if (busy) {
-    #if MACHINE_CAN_PAUSE
-      ACTION_ITEM(MSG_PAUSE_PRINT, ui.pause_print);
-    #endif
-    #if MACHINE_CAN_STOP
-      SUBMENU(MSG_STOP_PRINT, []{
-        MenuItem_confirm::select_screen(
-          GET_TEXT_F(MSG_BUTTON_STOP), GET_TEXT_F(MSG_BACK),
-          ui.abort_print, nullptr,
-          GET_TEXT_F(MSG_STOP_PRINT), (const char *)nullptr, F("?")
-        );
-      });
-    #endif
-
-    #if ENABLED(GCODE_REPEAT_MARKERS)
-      if (repeat.is_active())
-        ACTION_ITEM(MSG_END_LOOPS, repeat.cancel);
-    #endif
-
-    SUBMENU(MSG_TUNE, menu_tune);
-
-    #if ENABLED(CANCEL_OBJECTS) && DISABLED(SLIM_LCD_MENUS)
-      SUBMENU(MSG_CANCEL_OBJECT, []{ editable.int8 = -1; ui.goto_screen(menu_cancelobject); });
-    #endif
-  }
-  else {
-
-    // SD Card / Flash Drive
-    #if ENABLED(MEDIA_MENU_AT_TOP)
-      INJECT_MENU_ITEMS(media_menu_items());
-    #endif
-
-    if (TERN0(MACHINE_CAN_PAUSE, marlin.printingIsPaused()))
-      ACTION_ITEM(MSG_RESUME_PRINT, ui.resume_print);
-
-    #if ENABLED(HOST_START_MENU_ITEM) && defined(ACTION_ON_START)
-      ACTION_ITEM(MSG_HOST_START_PRINT, hostui.start);
-    #endif
-
-    #if ENABLED(PREHEAT_SHORTCUT_MENU_ITEM)
-      SUBMENU(MSG_PREHEAT_CUSTOM, menu_preheat_only);
-    #endif
-
-    SUBMENU(MSG_MOTION, menu_motion);
-
-    #if ANY(HAS_LEVELING, HAS_BED_PROBE, ASSISTED_TRAMMING_WIZARD, LCD_BED_TRAMMING)
-      SUBMENU(MSG_PROBE_AND_LEVEL, menu_probe_level);
-    #endif
-  }
-
-  #if HAS_CUTTER
-    SUBMENU(MSG_CUTTER(MENU), STICKY_SCREEN(menu_spindle_laser));
-  #endif
-
-  #if ENABLED(ADVANCED_PAUSE_FEATURE)
-    #if E_STEPPERS == 1 && DISABLED(FILAMENT_LOAD_UNLOAD_GCODES)
-      YESNO_ITEM(MSG_FILAMENTCHANGE, menu_change_filament, nullptr, GET_TEXT_F(MSG_FILAMENTCHANGE), (const char *)nullptr, F("?"));
-    #else
-      SUBMENU(MSG_FILAMENTCHANGE, menu_change_filament);
-    #endif
-  #endif
-
-  #if HAS_TEMPERATURE
-    SUBMENU(MSG_TEMPERATURE, menu_temperature);
-  #endif
-
-  #if HAS_POWER_MONITOR
-    SUBMENU(MSG_POWER_MONITOR, menu_power_monitor);
-  #endif
-
-  #if ENABLED(MIXING_EXTRUDER)
-    SUBMENU(MSG_MIXER, menu_mixer);
-  #endif
-
-  #if ENABLED(MMU_MENUS)
-    // MMU3 can show print stats which can be useful during
-    // the print, so MMU menus are required for MMU3.
-    if (TERN1(HAS_PRUSA_MMU2, !busy)) SUBMENU(MSG_MMU2_MENU, menu_mmu2);
-  #endif
-
-  SUBMENU(MSG_CONFIGURATION, menu_configuration);
-
-  #if ENABLED(CUSTOM_MENU_MAIN)
-    if (TERN1(CUSTOM_MENU_MAIN_ONLY_IDLE, !busy)) {
-      #ifdef CUSTOM_MENU_MAIN_TITLE
-        SUBMENU_F(F(CUSTOM_MENU_MAIN_TITLE), custom_menus_main);
-      #else
-        SUBMENU(MSG_CUSTOM_COMMANDS, custom_menus_main);
-      #endif
-    }
-  #endif
-
-  #if ENABLED(LED_CONTROL_MENU)
-    SUBMENU(MSG_LIGHTS, menu_led);
-  #elif ALL(CASE_LIGHT_MENU, CASELIGHT_USES_BRIGHTNESS)
-    SUBMENU(MSG_CASE_LIGHT, menu_case_light);
-  #elif ENABLED(CASE_LIGHT_MENU)
-    EDIT_ITEM(bool, MSG_CASE_LIGHT, &caselight.on, caselight.update_enabled);
-  #endif
-
-  //
-  // Switch power on/off
-  //
-  #if ENABLED(PSU_CONTROL)
-    if (powerManager.psu_on)
-      #if ENABLED(PS_OFF_CONFIRM)
-        CONFIRM_ITEM(MSG_SWITCH_PS_OFF,
-          MSG_YES, MSG_NO,
-          ui.poweroff, nullptr,
-          GET_TEXT_F(MSG_SWITCH_PS_OFF), (const char *)nullptr, F("?")
-        );
-      #else
-        ACTION_ITEM(MSG_SWITCH_PS_OFF, ui.poweroff);
-      #endif
-    else
-      GCODES_ITEM(MSG_SWITCH_PS_ON, F("M80"));
-  #endif
-
-  // SD Card / Flash Drive
-  #if DISABLED(MEDIA_MENU_AT_TOP)
-    if (!busy) INJECT_MENU_ITEMS(media_menu_items());
-  #endif
-
-  #if HAS_SERVICE_INTERVALS
-    static auto _service_reset = [](const int index) {
-      print_job_timer.resetServiceInterval(index);
-      ui.completion_feedback();
-      ui.reset_status();
-      ui.return_to_status();
-    };
-    #if SERVICE_INTERVAL_1 > 0
-      CONFIRM_ITEM_F(F(SERVICE_NAME_1),
-        MSG_BUTTON_RESET, MSG_BUTTON_CANCEL,
-        []{ _service_reset(1); }, nullptr,
-        GET_TEXT_F(MSG_SERVICE_RESET), F(SERVICE_NAME_1), F("?")
-      );
-    #endif
-    #if SERVICE_INTERVAL_2 > 0
-      CONFIRM_ITEM_F(F(SERVICE_NAME_2),
-        MSG_BUTTON_RESET, MSG_BUTTON_CANCEL,
-        []{ _service_reset(2); }, nullptr,
-        GET_TEXT_F(MSG_SERVICE_RESET), F(SERVICE_NAME_2), F("?")
-      );
-    #endif
-    #if SERVICE_INTERVAL_3 > 0
-      CONFIRM_ITEM_F(F(SERVICE_NAME_3),
-        MSG_BUTTON_RESET, MSG_BUTTON_CANCEL,
-        []{ _service_reset(3); }, nullptr,
-        GET_TEXT_F(MSG_SERVICE_RESET), F(SERVICE_NAME_3), F("?")
-      );
-    #endif
-  #endif
-
-  #if HAS_MULTI_LANGUAGE
-    SUBMENU(LANGUAGE, menu_language);
-  #endif
-
-  #if ENABLED(HOST_SHUTDOWN_MENU_ITEM) && defined(SHUTDOWN_ACTION)
-    SUBMENU(MSG_HOST_SHUTDOWN, []{
-      MenuItem_confirm::select_screen(
-        GET_TEXT_F(MSG_BUTTON_PROCEED), GET_TEXT_F(MSG_BUTTON_CANCEL),
-        []{ ui.return_to_status(); hostui.shutdown(); }, nullptr,
-        GET_TEXT_F(MSG_HOST_SHUTDOWN), (const char *)nullptr, F("?")
-      );
-    });
-  #endif
-
-  #if ENABLED(LCD_INFO_MENU)
-
-    SUBMENU(MSG_INFO_MENU, menu_info);
-
-  #elif HAS_GAMES
-
-    #if ENABLED(GAMES_EASTER_EGG)
-      SKIP_ITEM();
-      SKIP_ITEM();
-      SKIP_ITEM();
-    #endif
-    // Game sub-menu or the individual game
-    {
-      SUBMENU(
-        #if HAS_GAME_MENU
-          MSG_GAMES, menu_game
-        #elif ENABLED(MARLIN_BRICKOUT)
-          MSG_BRICKOUT, brickout.enter_game
-        #elif ENABLED(MARLIN_INVADERS)
-          MSG_INVADERS, invaders.enter_game
-        #elif ENABLED(MARLIN_SNAKE)
-          MSG_SNAKE, snake.enter_game
-        #elif ENABLED(MARLIN_MAZE)
-          MSG_MAZE, maze.enter_game
-        #endif
-      );
-    }
-
-  #endif
+  SUBMENU_N(X_AXIS, MSG_MOVE_X_1MM,  []{ motion.soft_endstop._enabled = false; ui.module_calibration_flag = true; ui.manual_move.menu_scale = 1;    lcd_move_axis(X_AXIS); });
+  SUBMENU_N(X_AXIS, MSG_MOVE_X_01MM, []{ motion.soft_endstop._enabled = false; ui.module_calibration_flag = true; ui.manual_move.menu_scale = 0.1; lcd_move_axis(X_AXIS); });
+  SUBMENU_N(Y_AXIS, MSG_MOVE_Y_1MM,  []{ motion.soft_endstop._enabled = false; ui.module_calibration_flag = true; ui.manual_move.menu_scale = 1;    lcd_move_axis(Y_AXIS); });
+  SUBMENU_N(Y_AXIS, MSG_MOVE_Y_01MM, []{ motion.soft_endstop._enabled = false; ui.module_calibration_flag = true; ui.manual_move.menu_scale = 0.1; lcd_move_axis(Y_AXIS); });
 
   END_MENU();
 }
+
+void lcd_level_command() {
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    autoProbe.swtich_cool_fan = true;
+  #endif
+  ui.setzoffset(0);
+  gcode.process_subcommands_now(F("G28XY"));
+  ui.lcdLeveingstate = LEVEING_HEATING;
+  queue.inject_P(PSTR("G28\nG29"));
+  ui.clear_all = true;
+  ui.goto_screen(lcd_level_top_windown);
+  ui.clear_all = false;
+}
+
+void lcd_level_task() {
+  ui.defer_status_screen();
+  const bool ui_selection = ui.update_selection(), got_click = ui.use_click();
+  if (got_click || ui.should_draw()) {
+    ui.last_confirm_windown_enabled = ui.confirm_windown_enabled;
+    ui.confirm_windown_enabled = true;
+    MenuItem_confirm::draw_select_screen(
+      GET_TEXT_F(MSG_BUTTON_STOP), GET_TEXT_F(MSG_BACK),
+      ui_selection,
+      GET_TEXT_F(MSG_LEVEL_BED), (const char *)nullptr, nullptr
+    );
+    if (got_click) {
+      ui.confirm_windown_enabled = false;
+      selectFunc_t callFunc = !ui_selection ? lcd_level_command : nullptr;
+      if (callFunc) {
+        did_pause_print = 0;
+        callFunc();
+      }
+      else {
+        ui.goto_previous_screen();
+        ui.previous_callbackFunc();
+      }
+    }
+  }
+}
+
+void menu_main() {
+  START_MENU();
+  BACK_ITEM(MSG_INFO_SCREEN);
+
+  // Disable Steppers
+  GCODES_ITEM(MSG_DISABLE_STEPPERS, F("M84"));
+
+  // Move XYZ Axis
+  if (TERN1(DELTA, motion.all_axes_homed()))
+    SUBMENU(MSG_MOVE_AXIS, menu_move);
+
+  // Filament load/unload
+  SUBMENU(MSG_FILAMENTCHANGE, filament_change);
+
+  // Auto Level
+  SUBMENU(MSG_LEVEL_BED, lcd_level_task);
+
+  // Module calibration
+  SUBMENU(MSG_MODULE_CALIBRATION, menu_calibration);
+
+  // More Configuration
+  SUBMENU(MSG_MORE_CONFIG, menu_configuration);
+
+  END_MENU();
+}
+
 
 #endif // HAS_MARLINUI_MENU

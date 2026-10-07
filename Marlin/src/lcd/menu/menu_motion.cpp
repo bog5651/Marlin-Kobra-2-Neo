@@ -35,6 +35,10 @@
 #include "../../gcode/parser.h" // for inch support
 #include "../../module/temperature.h"
 
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../../HAL/STM32/autoGetZoffset.h"
+#endif
+
 #if ENABLED(DELTA)
   #include "../../module/delta.h"
 #endif
@@ -51,11 +55,27 @@ constexpr bool has_large_area() {
 //
 
 void lcd_move_axis(const AxisEnum axis) {
-  if (ui.use_click()) return ui.goto_previous_screen_no_defer();
+  if (ui.use_click()) {
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      if (ui.module_calibration_flag == true && motion.soft_endstop._enabled == false && autoProbe.can_move_calibration == true) {
+        autoProbe.calibration_positon.x = motion.position.x;
+        autoProbe.calibration_positon.y = motion.position.y;
+      }
+    #endif
+    ui.module_calibration_flag = false;
+    ui.goto_previous_screen_no_defer();
+    ui.previous_callbackFunc();
+    return;
+  }
+
   if (ui.encoderPosition && !ui.manual_move.processing) {
     // Get motion limit from software endstops, if any
     float min, max;
     motion.soft_endstop.get_manual_axis_limits(axis, min, max);
+    if (!motion.soft_endstop.enabled()) {
+      if (axis == X_AXIS) max = 230;
+      else if (axis == Y_AXIS) max = 242;
+    }
 
     // Delta limits XY based on the current offset from center
     // This assumes the center is 0,0
@@ -72,45 +92,20 @@ void lcd_move_axis(const AxisEnum axis) {
     ui.manual_move.soon(axis);
     ui.refresh(LCDVIEW_REDRAW_NOW);
   }
-  ui.encoderPosition = 0;
+
   if (ui.should_draw()) {
     MenuEditItemBase::itemIndex = axis;
     const float pos = ui.manual_move.axis_value(axis);
-    if (parser.using_inch_units() && !parser.axis_is_rotational(axis)) {
-      const float imp_pos = parser.per_axis_value(axis, pos);
+    if (parser.using_inch_units()) {
+      const float imp_pos = LINEAR_UNIT(pos);
       MenuEditItemBase::draw_edit_screen(GET_TEXT_F(MSG_MOVE_N), ftostr63(imp_pos));
     }
     else
-      MenuEditItemBase::draw_edit_screen(GET_TEXT_F(MSG_MOVE_N), ui.manual_move.menu_scale >= 0.1f ? (has_large_area() ? ftostr51sign(pos) : ftostr41sign(pos)) : ftostr63(pos));
+      draw_edit_move_axis_screen(GET_TEXT_F(MSG_MOVE_N), axis, ui.manual_move.menu_scale >= 0.1f ? (has_large_area() ? ftostr51sign(pos) : ftostr41sign(pos)) : ftostr63(pos), pos);
   }
+
+  ui.encoderPosition = 0;
 }
-
-#if E_MANUAL
-
-  static void lcd_move_e(TERN_(MULTI_E_MANUAL, const int8_t eindex=motion.extruder)) {
-    if (ui.use_click()) return ui.goto_previous_screen_no_defer();
-    if (ui.encoderPosition) {
-      if (!ui.manual_move.processing) {
-        const float diff = float(int32_t(ui.encoderPosition)) * ui.manual_move.menu_scale;
-        TERN(IS_KINEMATIC, ui.manual_move.offset, motion.position.e) += diff;
-        ui.manual_move.soon(E_AXIS OPTARG(MULTI_E_MANUAL, eindex));
-        ui.refresh(LCDVIEW_REDRAW_NOW);
-      }
-      ui.encoderPosition = 0;
-    }
-    if (ui.should_draw()) {
-      TERN_(MULTI_E_MANUAL, MenuItemBase::init(eindex));
-      MenuEditItemBase::draw_edit_screen(
-        GET_TEXT_F(TERN(MULTI_E_MANUAL, MSG_MOVE_EN, MSG_MOVE_E)),
-        ftostr41sign(motion.position.e
-          PLUS_TERN0(IS_KINEMATIC, ui.manual_move.offset)
-          MINUS_TERN0(MANUAL_E_MOVES_RELATIVE, ui.manual_move.e_origin)
-        )
-      );
-    } // should_draw
-  }
-
-#endif // E_MANUAL
 
 #if ANY(PROBE_OFFSET_WIZARD, X_AXIS_TWIST_COMPENSATION)
 
@@ -224,28 +219,46 @@ void _menu_move_distance(const AxisEnum axis, const screenFunc_t func, const int
 #if E_MANUAL
 
   inline void _goto_menu_move_distance_e() {
-    ui.goto_screen([]{ _menu_move_distance(E_AXIS, []{ lcd_move_e(); }); });
+    const bool tool_cold = thermalManager.degHotend(motion.extruder) < 215 && thermalManager.degTargetHotend(motion.extruder) != 215;
+    ui.clear_all = true;
+    if (tool_cold)
+      ui.goto_screen([]{ thermalManager.setTargetHotend(215, 0); ui.goto_screen(preheat_to_move_E); });
+    else
+      ui.goto_screen(draw_unload_load_filament);
   }
 
-  inline void _menu_move_distance_e_maybe() {
-    if (thermalManager.tooColdToExtrude(motion.extruder)) {
-      ui.goto_screen([]{
-        MenuItem_confirm::select_screen(
-          GET_TEXT_F(MSG_BUTTON_PROCEED), GET_TEXT_F(MSG_BACK),
-          _goto_menu_move_distance_e, nullptr,
-          GET_TEXT_F(MSG_HOTEND_TOO_COLD), (const char *)nullptr, F("!")
-        );
-      });
-    }
-    else
-      _goto_menu_move_distance_e();
+  inline void cancel_unload_load_filament() {
+    filament_cmd = FILA_NO_ACT;
+    ui.goto_previous_screen();
+    ui.previous_callbackFunc();
+  }
+
+  void _menu_move_distance_e_maybe() {
+    ui.goto_screen([]{
+      MenuItem_confirm::select_screen(
+        GET_TEXT_F(MSG_BUTTON_PROCEED), GET_TEXT_F(MSG_BACK),
+        _goto_menu_move_distance_e, cancel_unload_load_filament,
+        filament_cmd == FILA_IN ? GET_TEXT_F(MSG_FILAMENTLOAD) : GET_TEXT_F(MSG_FILAMENTUNLOAD), (const char *)nullptr, nullptr
+      );
+    });
   }
 
 #endif
 
 void menu_move() {
   START_MENU();
-  BACK_ITEM(MSG_MOTION);
+  BACK_ITEM(MSG_BACK);
+
+  #if ENABLED(INDIVIDUAL_AXIS_HOMING_SUBMENU)
+    SUBMENU(MSG_HOMING, menu_home);
+  #else
+    #if ENABLED(INDIVIDUAL_AXIS_HOMING_MENU)
+      #define _HOME_ITEM(N) GCODES_ITEM_N(N##_AXIS, MSG_AUTO_HOME_N, F("G28" STR_##N));
+      MAIN_AXIS_MAP(_HOME_ITEM);
+      #undef _HOME_ITEM
+    #endif
+      GCODES_ITEM(MSG_AUTO_HOME, FPSTR(G28_STR));
+  #endif
 
   #if ALL(HAS_SOFTWARE_ENDSTOPS, SOFT_ENDSTOPS_MENU_ITEM)
     EDIT_ITEM(bool, MSG_LCD_SOFT_ENDSTOPS, &motion.soft_endstop._enabled);
@@ -254,11 +267,10 @@ void menu_move() {
   // Move submenu for each axis
   if (NONE(IS_KINEMATIC, NO_MOTION_BEFORE_HOMING) || motion.all_axes_homed()) {
     if (TERN1(DELTA, motion.position.z <= delta_clip_start_height)) {
-      #if HAS_X_AXIS
-        SUBMENU_N(X_AXIS, MSG_MOVE_N, []{ _menu_move_distance(X_AXIS, []{ lcd_move_axis(X_AXIS); }); });
-      #endif
+      ui.fresh_flag = true;
+      SUBMENU_N(X_AXIS, MSG_MOVE_N, []{ lcd_move_axis(X_AXIS); });
       #if HAS_Y_AXIS
-        SUBMENU_N(Y_AXIS, MSG_MOVE_N, []{ _menu_move_distance(Y_AXIS, []{ lcd_move_axis(Y_AXIS); }); });
+        SUBMENU_N(Y_AXIS, MSG_MOVE_N, []{ lcd_move_axis(Y_AXIS); });
       #endif
     }
     else {
@@ -267,61 +279,14 @@ void menu_move() {
       #endif
     }
     #if HAS_Z_AXIS
-      #define _AXIS_MOVE(N) SUBMENU_N(N, MSG_MOVE_N, []{ _menu_move_distance(AxisEnum(N), []{ lcd_move_axis(AxisEnum(N)); }); });
+      #define _AXIS_MOVE(N) SUBMENU_N(N, MSG_MOVE_N, []{ lcd_move_axis(AxisEnum(N)); });
       REPEAT_S(2, NUM_AXES, _AXIS_MOVE);
     #endif
   }
   else
     GCODES_ITEM(MSG_AUTO_HOME, FPSTR(G28_STR));
 
-  #if ANY(HAS_SWITCHING_EXTRUDER, HAS_SWITCHING_NOZZLE, MAGNETIC_SWITCHING_TOOLHEAD)
-
-    #if EXTRUDERS >= 4
-      switch (motion.extruder) {
-        case 0: GCODES_ITEM_N(1, MSG_SELECT_E, F("T1")); break;
-        case 1: GCODES_ITEM_N(0, MSG_SELECT_E, F("T0")); break;
-        case 2: GCODES_ITEM_N(3, MSG_SELECT_E, F("T3")); break;
-        case 3: GCODES_ITEM_N(2, MSG_SELECT_E, F("T2")); break;
-        #if EXTRUDERS == 6
-          case 4: GCODES_ITEM_N(5, MSG_SELECT_E, F("T5")); break;
-          case 5: GCODES_ITEM_N(4, MSG_SELECT_E, F("T4")); break;
-        #endif
-      }
-    #elif EXTRUDERS == 3
-      if (motion.extruder < 2)
-        GCODES_ITEM_N(1 - motion.extruder, MSG_SELECT_E, motion.extruder ? F("T0") : F("T1"));
-    #else
-      GCODES_ITEM_N(1 - motion.extruder, MSG_SELECT_E, motion.extruder ? F("T0") : F("T1"));
-    #endif
-
-  #elif ENABLED(DUAL_X_CARRIAGE)
-
-    GCODES_ITEM_N(1 - motion.extruder, MSG_SELECT_E, motion.extruder ? F("T0") : F("T1"));
-
-  #endif
-
-  #if E_MANUAL
-
-    // The current extruder
-    SUBMENU(MSG_MOVE_E, _menu_move_distance_e_maybe);
-
-    #define SUBMENU_MOVE_E(N) SUBMENU_N(N, MSG_MOVE_EN, []{ _menu_move_distance(E_AXIS, []{ lcd_move_e(N); }, N); });
-
-    #if HAS_SWITCHING_EXTRUDER || HAS_SWITCHING_NOZZLE
-
-      // ...and the non-switching
-      #if E_MANUAL == 7 || E_MANUAL == 5 || E_MANUAL == 3
-        SUBMENU_MOVE_E(E_MANUAL - 1);
-      #endif
-
-    #elif MULTI_E_MANUAL
-
-      // Independent extruders with one E stepper per hotend
-      REPEAT(E_MANUAL, SUBMENU_MOVE_E);
-
-    #endif
-
-  #endif // E_MANUAL
+  // The extruder move is part of the filament load/unload flow (see menu_main)
 
   END_MENU();
 }

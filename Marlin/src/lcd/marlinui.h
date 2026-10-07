@@ -251,6 +251,8 @@ public:
   static bool pause_pending;         // A pause/resume request is queued but not yet executed
   static bool clear_all;             // Draw full-screen (hide the factory sidebar)
   static bool confirm_windown_enabled, last_confirm_windown_enabled;
+  static bool module_calibration_flag;
+  static bool model_fan_enabled;
   static bool real_duration_state;
   static float temp_probe_zoffset;
   static bool fresh_flag;
@@ -261,6 +263,7 @@ public:
   static void flexible_clear_lcd(const uint16_t x, const uint16_t y, const uint16_t width, const uint16_t height);
   static void previous_callbackFunc();
   static void back_callbackFunc();
+  static void fan_callbackFunc();
   static void pausu_befor_event();
   static void StatusChange(const char * const msg);
 

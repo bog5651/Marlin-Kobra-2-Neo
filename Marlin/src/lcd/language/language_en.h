@@ -79,9 +79,9 @@ namespace LanguageNarrow_en {
   LSTR MSG_MEDIA_REMOVED                  = MEDIA_TYPE_EN _UxGT(" Removed");
   LSTR MSG_LCD_ENDSTOPS                   = _UxGT("Endstops");
   LSTR MSG_MAIN_MENU                      = _UxGT("Main Menu");
-  LSTR MSG_DISABLE_STEPPERS               = _UxGT("Disable Steppers");
-  LSTR MSG_HOMING                         = _UxGT("Homing");
-  LSTR MSG_AUTO_HOME                      = _UxGT("Auto Home");
+  LSTR MSG_DISABLE_STEPPERS               = _UxGT("Motor-Off");
+  LSTR MSG_HOMING                         = _UxGT("Homing...");
+  LSTR MSG_AUTO_HOME                      = _UxGT("Home All");
   LSTR MSG_AUTO_HOME_X                    = _UxGT("Home X");
   LSTR MSG_AUTO_HOME_Y                    = _UxGT("Home Y");
   LSTR MSG_AUTO_HOME_Z                    = _UxGT("Home Z");
@@ -113,7 +113,7 @@ namespace LanguageNarrow_en {
   LSTR MSG_MOVE_AXIS                      = _UxGT("Move Axis");
   LSTR MSG_PROBE_AND_LEVEL                = _UxGT("Probe and Level");
   LSTR MSG_BED_LEVELING                   = _UxGT("Bed Leveling");
-  LSTR MSG_LEVEL_BED                      = _UxGT("Level Bed");
+  LSTR MSG_LEVEL_BED                      = _UxGT("Auto Level");
   LSTR MSG_MOVE_X                         = _UxGT("Move X");
   LSTR MSG_MOVE_Y                         = _UxGT("Move Y");
   LSTR MSG_MOVE_Z                         = _UxGT("Move Z");
@@ -128,7 +128,7 @@ namespace LanguageNarrow_en {
   LSTR MSG_NOZZLE                         = _UxGT("Nozzle");
   LSTR MSG_NOZZLE_N                       = _UxGT("Nozzle ~");
   LSTR MSG_BED                            = _UxGT("Bed");
-  LSTR MSG_FAN_SPEED                      = _UxGT("Fan Speed");
+  LSTR MSG_FAN_SPEED                      = _UxGT("Fan");
   LSTR MSG_FAN_SPEED_N                    = _UxGT("Fan ~ Speed");
   LSTR MSG_FLOW                           = _UxGT("Flow");
   LSTR MSG_FLOW_N                         = _UxGT("Flow ~");
@@ -164,7 +164,7 @@ namespace LanguageNarrow_en {
   LSTR MSG_LOAD_EEPROM                    = _UxGT("Load Settings");
   LSTR MSG_RESTORE_DEFAULTS               = _UxGT("Restore Defaults");
   LSTR MSG_REFRESH                        = LCD_STR_REFRESH _UxGT("Refresh");
-  LSTR MSG_INFO_SCREEN                    = _UxGT("Info Screen");
+  LSTR MSG_INFO_SCREEN                    = _UxGT("Home Page");
   LSTR MSG_PREPARE                        = _UxGT("Prepare");
   LSTR MSG_TUNE                           = _UxGT("Tune");
   LSTR MSG_PAUSE_PRINT                    = _UxGT("Pause Print");
@@ -188,7 +188,7 @@ namespace LanguageNarrow_en {
   LSTR MSG_CONTROL_RETRACT_RECOVER_SWAP   = _UxGT("S Unretr. mm");
   LSTR MSG_CONTROL_RETRACT_RECOVERF       = _UxGT("Unretract V");
   LSTR MSG_AUTORETRACT                    = _UxGT("Auto-Retract");
-  LSTR MSG_FILAMENTCHANGE                 = _UxGT("Change Filament");
+  LSTR MSG_FILAMENTCHANGE                 = _UxGT("Filament");
   LSTR MSG_FILAMENTCHANGE_E               = _UxGT("Change * Filament");
   LSTR MSG_ATTACH_MEDIA                   = _UxGT("Attach ") MEDIA_TYPE_EN;
   LSTR MSG_ATTACH_SD                      = _UxGT("Attach SD Card");
@@ -440,9 +440,9 @@ namespace LanguageNarrow_en {
   LSTR MSG_SINGLENOZZLE_PRIME_SPEED       = _UxGT("Prime Speed");
   LSTR MSG_SINGLENOZZLE_RETRACT_SPEED     = _UxGT("Retract Speed");
   LSTR MSG_NOZZLE_STANDBY                 = _UxGT("Nozzle Standby");
-  LSTR MSG_FILAMENTLOAD                   = _UxGT("Load Filament");
+  LSTR MSG_FILAMENTLOAD                   = _UxGT("Extrude");
   LSTR MSG_FILAMENTLOAD_E                 = _UxGT("Load * Filament");
-  LSTR MSG_FILAMENTUNLOAD                 = _UxGT("Unload Filament");
+  LSTR MSG_FILAMENTUNLOAD                 = _UxGT("Retract");
   LSTR MSG_FILAMENTUNLOAD_E               = _UxGT("Unload * Filament");
   LSTR MSG_FILAMENTUNLOAD_ALL             = _UxGT("Unload All");
   LSTR MSG_RELEASE_MEDIA                  = _UxGT("Release ") MEDIA_TYPE_EN;
@@ -1144,6 +1144,7 @@ namespace Language_en {
   using namespace LanguageTall_en;
 
   // Factory (Anycubic) strings
+  LSTR LANGUAGE_CHOOSE                    = _UxGT("Language");
   LSTR MSG_HEATING_NOZZLE                 = _UxGT("Nozzle heating");
   LSTR MSG_MORE_CONFIG                    = _UxGT("More Settings");
   LSTR MSG_ABOUT                          = _UxGT("About");

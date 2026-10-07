@@ -27,6 +27,14 @@
 
 #include "limits.h"
 
+// Factory (Anycubic) device identity
+#define DEVICE_NAME             "Anycubic Kobra 2 Neo"
+#define FIRMWARE_VER            "V1.5.6.3"
+#define FIRMWARE_PORT           "Marlin 2.1.3-dev"
+#define FIRMWARE_AUTHOR         "bog5651"
+#define BUILD_VOLUME            "220*220*250 (mm)"
+#define TECH_SUPPORT            "https://www.anycubic.com"
+
 extern int8_t encoderLine, encoderTopLine, screen_items;
 
 void scroll_screen(const uint8_t limit, const bool is_menu);
@@ -251,6 +259,25 @@ void tft_babystep_zoffset();
 void printinf_finish();
 void Probing_Failed();
 extern bool calibration_state;
+
+void draw_edit_move_axis_screen(FSTR_P const fstr, int8_t axis, const char * const value, uint16_t pos);
+void lcd_level_top_windown();
+void unload_load_filament();
+void draw_unload_load_filament();
+void preheat_to_move_E();
+void filament_change();
+void menu_calibration();
+void lcd_level_task();
+void menu_about();
+void Reset_setting();
+#if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+  void menu_mesh_view();
+#endif
+
+typedef enum : uint8_t { FILA_NO_ACT, FILA_IN, FILA_OUT } _filament_cmd_t;
+extern _filament_cmd_t filament_cmd;
+extern bool unloaOrloaddfilamentstate, filament_staring;
+void _menu_move_distance_e_maybe();
 
 ////////////////////////////////////////////
 //////// Menu Item Helper Functions ////////

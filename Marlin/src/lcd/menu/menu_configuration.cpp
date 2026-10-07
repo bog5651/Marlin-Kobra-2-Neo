@@ -143,6 +143,7 @@ void menu_advanced_settings();
 #if ENABLED(SHAPING_MENU)
   void menu_advanced_input_shaping();
 #endif
+void menu_language();
 #if ANY(DELTA_CALIBRATION_MENU, DELTA_AUTO_CALIBRATION)
   void menu_delta_calibrate();
 #endif
@@ -642,11 +643,19 @@ void menu_advanced_settings();
 
 #endif // CUSTOM_MENU_CONFIG
 
+void Reset_setting() {
+  MenuItem_confirm::select_screen(
+    GET_TEXT_F(MSG_RESTORE_DEFAULTS), GET_TEXT_F(MSG_BACK),
+    ui.reset_settings, nullptr,
+    GET_TEXT_F(MSG_RESTORE_DEFAULTS), (const char *)nullptr, nullptr
+  );
+}
+
 void menu_configuration() {
   const bool busy = marlin.printer_busy();
 
   START_MENU();
-  BACK_ITEM(MSG_MAIN_MENU);
+  BACK_ITEM(MSG_BACK);
 
   #if ENABLED(CUSTOM_MENU_CONFIG)
     if (TERN1(CUSTOM_MENU_CONFIG_ONLY_IDLE, !busy)) {
@@ -656,12 +665,6 @@ void menu_configuration() {
         SUBMENU(MSG_CUSTOM_COMMANDS, custom_menus_configuration);
       #endif
     }
-  #endif
-
-  SUBMENU(MSG_ADVANCED_SETTINGS, menu_advanced_settings);
-
-  #if IS_KINEMATIC
-    SUBMENU(MSG_KINEMATICS_SETTINGS, menu_kinematics_settings);
   #endif
 
   //
@@ -692,10 +695,6 @@ void menu_configuration() {
       SUBMENU(MSG_TOUCHMI_PROBE, menu_touchmi);
     #endif
   }
-
-  #if ENABLED(HOTEND_IDLE_TIMEOUT)
-    SUBMENU(MSG_HOTEND_IDLE_TIMEOUT, menu_hotend_idle);
-  #endif
 
   //
   // Set single nozzle filament retract and prime length
@@ -733,19 +732,18 @@ void menu_configuration() {
     SUBMENU(MSG_RETRACT, menu_config_retract);
   #endif
 
-  #if HAS_FILAMENT_SENSOR
-    EDIT_ITEM(bool, MSG_RUNOUT_SENSOR, &runout.enabled, runout.reset);
+  #if HAS_FAN
+    EDIT_ITEM(bool, MSG_FAN_SPEED, &ui.model_fan_enabled, ui.fan_callbackFunc);
   #endif
 
-  #if HAS_FANCHECK
-    EDIT_ITEM(bool, MSG_FANCHECK, &fan_check.enabled);
+  #if HAS_MULTI_LANGUAGE
+    SUBMENU(LANGUAGE_CHOOSE, menu_language);
   #endif
+
+  SUBMENU(MSG_ABOUT, menu_about);
 
   #if ENABLED(POWER_LOSS_RECOVERY)
     EDIT_ITEM(bool, MSG_OUTAGE_RECOVERY, &recovery.enabled, recovery.changed);
-    #if HAS_PLR_BED_THRESHOLD
-      EDIT_ITEM(int3, MSG_RESUME_BED_TEMP, &recovery.bed_temp_threshold, 0, BED_MAX_TARGET);
-    #endif
   #endif
 
   // Preheat configurations
@@ -758,20 +756,29 @@ void menu_configuration() {
     EDIT_ITEM(bool, MSG_SOUND, &ui.sound_on, []{ ui.chirp(); });
   #endif
 
-  // Debug Menu when certain options are enabled
-  // Note: it is at the end of the list, so a more commonly used items should be placed above
-  #if HAS_DEBUG_MENU
-    SUBMENU(MSG_DEBUG_MENU, menu_debug);
-  #endif
-
   #if ENABLED(EEPROM_SETTINGS)
     ACTION_ITEM(MSG_STORE_EEPROM, ui.store_settings);
     if (!busy) ACTION_ITEM(MSG_LOAD_EEPROM, ui.load_settings);
   #endif
 
-  if (!busy) ACTION_ITEM(MSG_RESTORE_DEFAULTS, ui.reset_settings);
+  #if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+    SUBMENU(MSG_MESH_VIEWER, menu_mesh_view);
+  #endif
+
+  #if ENABLED(SHAPING_MENU) && DISABLED(SLIM_LCD_MENUS)
+    if (!busy) SUBMENU(MSG_INPUT_SHAPING, menu_advanced_input_shaping);
+  #endif
+
+  #if ENABLED(LIN_ADVANCE)
+    EDIT_ITEM(float42_52, MSG_ADVANCE_K, &planner.extruder_advance_K[0], 0, 10);
+  #endif
+
+  SUBMENU(MSG_ADVANCED_SETTINGS, menu_advanced_settings);
+
+  SUBMENU(MSG_RESTORE_DEFAULTS, Reset_setting);
 
   END_MENU();
 }
+
 
 #endif // HAS_MARLINUI_MENU

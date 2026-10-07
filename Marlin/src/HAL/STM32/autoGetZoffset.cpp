@@ -361,7 +361,7 @@ bool AutoProbe::module_calibration()
 			return 1;
 		}
 		motion.soft_endstop._enabled = true;
-		ui.set_status(F("Calibration done"));
+		LCD_MESSAGE(MSG_CALIBRATION_DONE); // Factory: close the "Position Calibration" screen
 		//calibration_finsh = true;
 		//ui.goto_previous_screen();
     	//ui.previous_callbackFunc();

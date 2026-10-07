@@ -890,4 +890,344 @@ void MarlinUI::StatusChange(const char * const msg) {
 
 bool calibration_state = false;
 
+// Factory filament commands
+_filament_cmd_t filament_cmd = FILA_NO_ACT;
+bool unloaOrloaddfilamentstate = false, filament_staring = false;
+
+// Factory Move Axis screen (single jog screen per axis)
+void draw_edit_move_axis_screen(FSTR_P const fstr, int8_t axis, const char * const value, uint16_t pos) {
+  if (ui.fresh_flag) {
+    ui.fresh_flag = false;
+    tft.canvas(0, 0, 50, TFT_HEIGHT);
+    tft.set_background(COLOR_BACKGROUND);
+
+    tft.canvas(0, 20, TFT_WIDTH, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(fstr, axis);
+    tft.add_text(tft_string.center(TFT_WIDTH), 0, COLOR_WHITE, tft_string);
+
+    tft.canvas(10, 131, 36, 36);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgLeftRound, COLOR_WHITE);
+
+    tft.canvas(274, 131, 36, 36);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgRightRound, COLOR_WHITE);
+  }
+
+  tft.canvas(110, 83, 100, 31);
+  tft.set_background(COLOR_BACKGROUND);
+  tft_string.set(value);
+  tft_string.add('m');
+  tft_string.add('m');
+  tft.add_text(tft_string.center(100), tft_string.center(31), COLOR_WHITE, tft_string);
+
+  #define SLIDER_LENGTH 208
+  LIMIT(pos, 0, Y_BED_SIZE);
+  tft.canvas(56, 141, SLIDER_LENGTH, 16);
+  tft.set_background(COLOR_SLIDER_INACTIVE);
+  tft.add_rectangle(0, 0, SLIDER_LENGTH, 16, COLOR_SLIDER_INACTIVE);
+  tft.add_bar(1, 1, ((SLIDER_LENGTH - 2) * (int16_t)pos) / Y_BED_SIZE, 14, COLOR_BLUE);
+  #undef SLIDER_LENGTH
+}
+
+// Factory auto-level progress screen
+void lcd_level_top_windown() {
+  uint16_t preheating_color, wipe_nozzle_color, probe_color, confirm_color;
+  uint16_t preheating_Fontcolor, wipe_nozzle_Fontcolor, probe_Fontcolor;
+  char nozzle_buf[16];
+  char bed_buf[16];
+  sprintf(nozzle_buf, "E: %u/%u", (uint16_t)thermalManager.wholeDegHotend(0), (uint16_t)thermalManager.degTargetHotend(0));
+  sprintf(bed_buf, "B: %u/%u", (uint16_t)thermalManager.wholeDegBed(), (uint16_t)thermalManager.degTargetBed());
+
+  if (ui.lcdLeveingstate == LEVEING_DONE) {
+    if (ui.use_click()) {
+      ui.return_to_status();
+      ui.clear_all = false;
+      ui.lcdLeveingstate = LEVEING_NONE;
+      return;
+    }
+  }
+  if (ui.should_draw()) {
+    if (ui.lcdLeveingstate == LEVEING_WIPE_NOZZLE) {
+      wipe_nozzle_color = probe_color = confirm_color = COLOR_GREY;
+      preheating_color = COLOR_GREEN;
+      preheating_Fontcolor = wipe_nozzle_Fontcolor = COLOR_WHITE;
+      probe_Fontcolor = COLOR_GREY;
+    }
+    else if (ui.lcdLeveingstate == LEVEING_PROBE) {
+      probe_color = confirm_color = COLOR_GREY;
+      wipe_nozzle_color = preheating_color = COLOR_GREEN;
+      preheating_Fontcolor = wipe_nozzle_Fontcolor = probe_Fontcolor = COLOR_WHITE;
+    }
+    else if (ui.lcdLeveingstate == LEVEING_DONE) {
+      wipe_nozzle_color = preheating_color = probe_color = COLOR_GREEN;
+      confirm_color = COLOR_BLUE;
+      preheating_Fontcolor = wipe_nozzle_Fontcolor = probe_Fontcolor = COLOR_WHITE;
+    }
+    else {
+      wipe_nozzle_color = preheating_color = probe_color = confirm_color = COLOR_GREY;
+      wipe_nozzle_Fontcolor = probe_Fontcolor = COLOR_GREY;
+      preheating_Fontcolor = COLOR_WHITE;
+    }
+
+    // Nozzle / bed temperatures
+    tft.canvas(20, 10, 100, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(nozzle_buf);
+    tft_string.trim();
+    tft.add_text(0, 0, COLOR_WHITE, tft_string);
+
+    tft.canvas(173, 10, 100, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(bed_buf);
+    tft_string.trim();
+    tft.add_text(0, 0, COLOR_WHITE, tft_string);
+
+    // Preheating
+    tft.canvas(20, 52, 106, 31);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT(MSG_LEVEING_PREHEATING));
+    tft_string.trim();
+    tft.add_text(0, 5, preheating_Fontcolor, tft_string);
+
+    // Wipe nozzle
+    tft.canvas(20, 92, 130, 31);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT(MSG_LEVEING_WIPE));
+    tft_string.trim();
+    tft.add_text(0, 5, wipe_nozzle_Fontcolor, tft_string);
+
+    // Probing
+    tft.canvas(20, 132, 106, 31);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT(MSG_LEVEING_PROBE));
+    tft_string.trim();
+    tft.add_text(0, 5, probe_Fontcolor, tft_string);
+
+    tft.canvas(276, 57, 24, 24);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgOK, preheating_color);
+
+    tft.canvas(276, 97, 24, 24);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgOK, wipe_nozzle_color);
+
+    tft.canvas(276, 137, 24, 24);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgOK, probe_color);
+
+    tft.canvas(105, 180, 110, 44);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgConfirm, confirm_color);
+  }
+  ui.refresh(LCDVIEW_CALL_REDRAW_NEXT);
+}
+
+// Factory filament load/unload flow
+void unload_load_filament() {
+  if (!filament_staring) return;
+
+  static millis_t return_ms = 0;
+  #define RETURN_TIMEOUT_MS 25000
+
+  if (filament_cmd == FILA_IN && unloaOrloaddfilamentstate == true) {
+    return_ms = millis() + RETURN_TIMEOUT_MS;
+    unloaOrloaddfilamentstate = false;
+    queue.inject_P("M83\nG1 E100 F300\nM82");
+  }
+  else if (filament_cmd == FILA_OUT && unloaOrloaddfilamentstate == true) {
+    return_ms = millis() + RETURN_TIMEOUT_MS;
+    unloaOrloaddfilamentstate = false;
+    queue.inject_P("M83\n G1 E30 F300\n G1 E-70 F400\nM82");
+  }
+
+  if (ELAPSED(millis(), return_ms)) {
+    filament_cmd = FILA_NO_ACT;
+    filament_staring = false;
+    ui.clear_all = false;
+    planner.quick_stop();
+    ui.goto_previous_screen_no_defer();
+    ui.previous_callbackFunc();
+  }
+}
+
+void draw_unload_load_filament() {
+  filament_staring = true;
+  if (ui.use_click()) {
+    ui.clear_all = false;
+    filament_cmd = FILA_NO_ACT;
+    filament_staring = false;
+    planner.quick_stop();
+    ui.goto_previous_screen_no_defer();
+    ui.previous_callbackFunc();
+    return;
+  }
+
+  if (ui.should_draw()) {
+    tft.canvas(0, 68, TFT_WIDTH, 30);
+    tft.set_background(COLOR_BACKGROUND);
+    if (filament_cmd == FILA_IN) tft_string.set(GET_TEXT_F(MSG_FILAMENTLOADING));
+    else if (filament_cmd == FILA_OUT) tft_string.set(GET_TEXT_F(MSG_FILAMENTUNLOADING));
+    tft_string.trim();
+    tft.add_text(tft_string.center(TFT_WIDTH), 5, COLOR_WHITE, tft_string);
+
+    tft.canvas(80, 136, 160, 44);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgBtn160Rounded, COLOR_GREY);
+    tft_string.set(GET_TEXT_F(MSG_FILAMENT_STOP));
+    tft_string.trim();
+    tft.add_text(tft_string.center(160), 12, COLOR_WHITE, tft_string);
+  }
+  ui.refresh(LCDVIEW_CALL_REDRAW_NEXT);
+}
+
+void preheat_to_move_E() {
+  const int16_t currentTemperature = thermalManager.temp_hotend[0].celsius;
+  const int16_t targetTemperature = thermalManager.temp_hotend[0].target;
+
+  ui.defer_status_screen();
+  if (ui.should_draw()) {
+    if (currentTemperature < 205) {
+      char str_buf[16];
+      sprintf(str_buf, "E: %u/%u", (uint16_t)currentTemperature, (uint16_t)targetTemperature);
+
+      tft.canvas(0, 72, 320, 32);
+      tft.set_background(COLOR_BACKGROUND);
+      tft_string.set(GET_TEXT_F(MSG_HEATING_NOZZLE));
+      tft_string.trim();
+      tft.add_text(tft_string.center(320), tft_string.center(32), COLOR_WHITE, tft_string);
+
+      tft.canvas(0, 104, 320, 32);
+      tft.set_background(COLOR_BACKGROUND);
+      tft_string.set(GET_TEXT_F(MSG_PLEASE_WAIT));
+      tft_string.trim();
+      tft.add_text(tft_string.center(320), tft_string.center(32), COLOR_WHITE, tft_string);
+
+      tft.canvas(0, 136, 320, 32);
+      tft.set_background(COLOR_BACKGROUND);
+      tft_string.set(str_buf);
+      tft_string.trim();
+      tft.add_text(tft_string.center(320), tft_string.center(32), COLOR_WHITE, tft_string);
+    }
+    else if (currentTemperature >= 205) {
+      ui.goto_screen(draw_unload_load_filament);
+    }
+  }
+  ui.refresh(LCDVIEW_CALL_REDRAW_NEXT);
+}
+
+// Factory About screen
+void menu_about() {
+  ui.defer_status_screen();
+  if (ui.should_draw()) {
+    tft.canvas(0, 0, 50, TFT_HEIGHT);
+    tft.set_background(COLOR_BACKGROUND);
+
+    tft.canvas(0, 40, TFT_WIDTH, 30);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(DEVICE_NAME);
+    tft_string.trim();
+    tft.add_text(tft_string.center(TFT_WIDTH), 5, COLOR_MENU_TEXT, tft_string);
+
+    tft.canvas(0, 80, TFT_WIDTH, 30);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(FIRMWARE_PORT " / " FIRMWARE_AUTHOR);
+    tft_string.trim();
+    tft.add_text(tft_string.center(TFT_WIDTH), 5, COLOR_MENU_TEXT, tft_string);
+
+    tft.canvas(0, 120, TFT_WIDTH, 30);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(BUILD_VOLUME);
+    tft_string.trim();
+    tft.add_text(tft_string.center(TFT_WIDTH), 5, COLOR_MENU_TEXT, tft_string);
+
+    tft.canvas(0, 160, TFT_WIDTH, 30);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(TECH_SUPPORT);
+    tft_string.trim();
+    tft.add_text(tft_string.center(TFT_WIDTH), 5, COLOR_MENU_TEXT, tft_string);
+  }
+  if (ui.use_click()) {
+    ui.goto_previous_screen();
+    ui.previous_callbackFunc();
+  }
+}
+
+#if ENABLED(AUTO_BED_LEVELING_BILINEAR)
+
+  // Factory 7x7 BILINEAR mesh viewer
+  void menu_mesh_view() {
+    ui.defer_status_screen();
+    if (ui.should_draw()) {
+      ui.flexible_clear_lcd(0, 0, TFT_WIDTH, TFT_HEIGHT);
+
+      constexpr uint8_t cell = _MIN((TFT_WIDTH - 8) / (GRID_MAX_POINTS_X), (TFT_HEIGHT - 34) / (GRID_MAX_POINTS_Y));
+      constexpr int16_t gx = _MAX(0, (TFT_WIDTH - (GRID_MAX_POINTS_X) * cell) / 2),
+                        gy = 30;
+
+      tft.canvas(0, 4, TFT_WIDTH, 24);
+      tft.set_background(COLOR_BACKGROUND);
+      tft_string.set(GET_TEXT_F(MSG_MESH_VIEWER));
+      tft_string.trim();
+      tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_MENU_TEXT, tft_string);
+
+      if (!bedlevel.mesh_is_valid()) {
+        tft.canvas(0, gy + 70, TFT_WIDTH, 24);
+        tft.set_background(COLOR_BACKGROUND);
+        tft_string.set(GET_TEXT_F(MSG_NO_VALID_MESH));
+        tft_string.trim();
+        tft.add_text(tft_string.center(TFT_WIDTH), 4, COLOR_YELLOW, tft_string);
+      }
+      else {
+        float zspan = 0.1f;
+        for (uint8_t x = 0; x < GRID_MAX_POINTS_X; ++x)
+          for (uint8_t y = 0; y < GRID_MAX_POINTS_Y; ++y) {
+            const float z = bedlevel.z_values[x][y];
+            if (!isnan(z)) {
+              const float az = fabs(z);
+              if (az > zspan) zspan = az;
+            }
+          }
+
+        tft.canvas(gx, gy, (GRID_MAX_POINTS_X) * cell, (GRID_MAX_POINTS_Y) * cell);
+        tft.set_background(COLOR_BACKGROUND);
+        for (uint8_t x = 0; x < GRID_MAX_POINTS_X; ++x)
+          for (uint8_t y = 0; y < GRID_MAX_POINTS_Y; ++y) {
+            const float z = bedlevel.z_values[x][y];
+            const uint16_t cx = x * cell, cy = ((GRID_MAX_POINTS_Y) - 1 - y) * cell;
+            uint16_t color = COLOR_GREY;
+            if (!isnan(z)) {
+              const float t = z / zspan;
+              color = t <= -0.5f ? COLOR_BLUE : t <= -0.15f ? COLOR_CYAN : t < 0.15f ? COLOR_LIME : t < 0.5f ? COLOR_YELLOW : COLOR_RED;
+
+              char sbuf[2] = { z < 0 ? '-' : '+', 0 }, vbuf[4];
+              const float az = _MIN(fabs(z), 99.0f);
+              if (az < 1.0f) {
+                const int f = int(az * 100.0f + 0.5f);
+                if (f >= 100) { vbuf[0] = '1'; vbuf[1] = '.'; vbuf[2] = '0'; vbuf[3] = 0; }
+                else { vbuf[0] = '.'; vbuf[1] = char('0' + f / 10); vbuf[2] = char('0' + f % 10); vbuf[3] = 0; }
+              }
+              else {
+                const int t10 = _MIN(99, int(az * 10.0f + 0.5f));
+                vbuf[0] = char('0' + t10 / 10); vbuf[1] = '.'; vbuf[2] = char('0' + t10 % 10); vbuf[3] = 0;
+              }
+              const uint16_t ty = cy >= 2 ? cy - 2 : 0;
+              tft_string.set(sbuf);
+              tft.add_text(cx + tft_string.center(cell), ty, COLOR_MENU_TEXT, tft_string);
+              tft_string.set(vbuf);
+              tft.add_text(cx + tft_string.center(cell), ty + 12, COLOR_MENU_TEXT, tft_string);
+            }
+            tft.add_rectangle(cx, cy, cell - 1, cell - 1, color);
+          }
+      }
+    }
+    if (ui.use_click()) {
+      ui.goto_previous_screen();
+      ui.previous_callbackFunc();
+    }
+  }
+
+#endif
+
 #endif // HAS_MARLINUI_MENU

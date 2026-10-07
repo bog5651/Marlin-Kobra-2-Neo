@@ -899,6 +899,7 @@ namespace Language_ru {
   LSTR MSG_TEMP_UINT                      = _UxGT("°C");
 
   // Factory (Anycubic) strings
+  LSTR LANGUAGE_CHOOSE                    = _UxGT("Язык");
   LSTR MSG_HEATING_NOZZLE                 = _UxGT("Нагрев сопла");
   LSTR MSG_MORE_CONFIG                    = _UxGT("Настройки");
   LSTR MSG_ABOUT                          = _UxGT("О программе");
