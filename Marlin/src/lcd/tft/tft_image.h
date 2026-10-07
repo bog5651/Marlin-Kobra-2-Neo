@@ -73,6 +73,17 @@ enum MarlinImage : uint8_t {
   imgBtn39Rounded,      // BtnRounded_42x39x4
   imgTimeElapsed,       // Time_Elapsed_32x32x4
   imgTimeRemaining,     // Time_Remaining_32x32x4
+  // Factory (Anycubic) images
+  imgPause,             // Pause_32x32x4
+  imgStartPrint,        // Starting_32x32x4
+  imgStop,              // Stop_32x32x4
+  imgLeftRound,         // LeftRound_36x36x4
+  imgRightRound,        // RightRound_36x36x4
+  imgOK,                // OK_24x24x4
+  imgHeatBackground,    // Hotend_bg_80x50x4
+  imgZoffsetTip,        // ZoffsetTip_137x137x16
+  imgZoffsetTip1,       // ZoffsetTip_137x34x16
+  imgBtn160Rounded,     // BtnRounded_160x44x4
   #if HAS_CUTTER
     imgCutter,          // Cutter_64x64x4
     imgCutterOn,        // Cutter_On_64x64x4
@@ -147,7 +158,6 @@ extern const tImage Confirm_64x64x4;
 extern const tImage Cancel_64x64x4;
 extern const tImage Increase_64x64x4;
 extern const tImage Decrease_64x64x4;
-extern const tImage Pause_64x64x4;
 
 extern const tImage Feedrate_32x32x4;
 extern const tImage Flowrate_32x32x4;
@@ -161,6 +171,17 @@ extern const tImage Refresh_32x32x4;
 extern const tImage Leveling_32x32x4;
 extern const tImage Time_Elapsed_32x32x4;
 extern const tImage Time_Remaining_32x32x4;
+// Factory (Anycubic) images
+extern const tImage Pause_32x32x4;
+extern const tImage Starting_32x32x4;
+extern const tImage Stop_32x32x4;
+extern const tImage LeftRound_36x36x4;
+extern const tImage RightRound_36x36x4;
+extern const tImage OK_24x24x4;
+extern const tImage Hotend_bg_80x50x4;
+extern const tImage ZoffsetTip_137x137x16;
+extern const tImage ZoffsetTip_137x34x16;
+extern const tImage BtnRounded_160x44x4;
 #if HAS_CUTTER
   extern const tImage Cutter_64x64x4;
   extern const tImage Cutter_On_64x64x4;

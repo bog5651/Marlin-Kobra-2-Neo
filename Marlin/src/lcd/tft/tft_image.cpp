@@ -65,6 +65,17 @@ const tImage images[imgCount] = {
   BtnRounded_42x39x4,                                      // imgBtn39Rounded
   Time_Elapsed_32x32x4,                                    // imgTimeElapsed
   Time_Remaining_32x32x4,                                  // imgTimeRemaining
+  // Factory (Anycubic) images
+  Pause_32x32x4,                                           // imgPause
+  Starting_32x32x4,                                        // imgStartPrint
+  Stop_32x32x4,                                            // imgStop
+  LeftRound_36x36x4,                                       // imgLeftRound
+  RightRound_36x36x4,                                      // imgRightRound
+  OK_24x24x4,                                              // imgOK
+  Hotend_bg_80x50x4,                                       // imgHeatBackground
+  ZoffsetTip_137x137x16,                                   // imgZoffsetTip
+  ZoffsetTip_137x34x16,                                    // imgZoffsetTip1
+  BtnRounded_160x44x4,                                     // imgBtn160Rounded
   #if HAS_CUTTER
     Cutter_64x64x4,                                        // imgCutter
     Cutter_On_64x64x4,                                     // imgCutterOn
