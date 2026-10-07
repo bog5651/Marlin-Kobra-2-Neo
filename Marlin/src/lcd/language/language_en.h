@@ -1142,4 +1142,30 @@ namespace LanguageTall_en {
 
 namespace Language_en {
   using namespace LanguageTall_en;
+
+  // Factory (Anycubic) strings
+  LSTR MSG_HEATING_NOZZLE                 = _UxGT("Nozzle heating");
+  LSTR MSG_MORE_CONFIG                    = _UxGT("More Settings");
+  LSTR MSG_ABOUT                          = _UxGT("About");
+  LSTR MSG_MODULE_CALIBRATION             = _UxGT("Module Calibration");
+  LSTR MSG_POSITION_CALIBRATION           = _UxGT("Position Calibration");
+  LSTR MSG_MOVE_X_1MM                     = _UxGT("Move X 1mm");
+  LSTR MSG_MOVE_X_01MM                    = _UxGT("Move X 0.1mm");
+  LSTR MSG_MOVE_Y_1MM                     = _UxGT("Move Y 1mm");
+  LSTR MSG_MOVE_Y_01MM                    = _UxGT("Move Y 0.1mm");
+  LSTR MSG_LEVEING_PREHEATING             = _UxGT("Preheating");
+  LSTR MSG_LEVEING_WIPE                   = _UxGT("Wiping Nozzle");
+  LSTR MSG_LEVEING_PROBE                  = _UxGT("Probe");
+  LSTR MSG_PRINT_FINISH                   = _UxGT("Printing Completed");
+  LSTR MSG_FILAMENTLOADING                = _UxGT("Extruding...");
+  LSTR MSG_FILAMENTUNLOADING              = _UxGT("Retracting filament...");
+  LSTR MSG_FILAMENT_STOP                  = _UxGT("Stop&Back ");
+  LSTR MSG_PROBE_FAILD                    = _UxGT("Auto Leveling Abnormal");
+  LSTR MSG_MODULE_PROBE_FAILD             = _UxGT("Calibration Abnormal");
+  LSTR MSG_READ_CARD_ERROR                = _UxGT("TF Card Read Error");
+  LSTR MSG_POWER_OUTAGE                   = _UxGT("Power Outage");
+  LSTR MSG_HOMING_START                   = _UxGT("HomingStart");
+  LSTR MSG_HOMING_DONE                    = _UxGT("HomingDone");
+  LSTR MSG_CALIBRATION_START              = _UxGT("CalibrationStart");
+  LSTR MSG_CALIBRATION_DONE               = _UxGT("CalibrationDone");
 }

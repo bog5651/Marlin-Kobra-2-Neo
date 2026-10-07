@@ -290,6 +290,9 @@ void GcodeSuite::G28() {
 
   TERN_(DWIN_CREALITY_LCD, dwinHomingStart());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingStart());
+  #if HAS_MARLINUI_MENU
+    LCD_MESSAGE(MSG_HOMING_START);
+  #endif
 
   planner.synchronize();          // Wait for planner moves to finish!
 
@@ -590,6 +593,9 @@ void GcodeSuite::G28() {
   TERN_(SOVOL_SV06_RTS, RTS_MoveAxisHoming());
   TERN_(DWIN_CREALITY_LCD, dwinHomingDone());
   TERN_(EXTENSIBLE_UI, ExtUI::onHomingDone());
+  #if HAS_MARLINUI_MENU
+    LCD_MESSAGE(MSG_HOMING_DONE);
+  #endif
 
   motion.report_position();
 

@@ -26,17 +26,22 @@
 
 #include "../gcode.h"
 #include "../../lcd/marlinui.h"
+#include "../../module/printcounter.h"
 
 /**
  * M117: Set LCD Status Message
  */
 void GcodeSuite::M117() {
 
-  if (parser.has_string())
-    ui.set_status_no_expire(parser.string_arg);
+  if (parser.string_arg && parser.string_arg[0])
+    ui.set_status(parser.string_arg, true);
   else
     ui.reset_status();
 
+  // Factory: a status message restarts the print timer and marks it as UI-driven
+  ui.real_duration();
+  print_job_timer.reset();
+  print_job_timer.start();
 }
 
 #endif // HAS_STATUS_MESSAGE

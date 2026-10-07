@@ -791,4 +791,103 @@ void tft_set_speed() {
   }
 }
 
+// Print finished screen (M1001)
+void printinf_finish() {
+  char buffer[22];
+  duration_t(print_job_timer.duration()).toString(buffer);
+  if (ui.use_click()) {
+    ui.confirm_windown_enabled = false;
+    ui.start_print_status = ui.print_task_done = false;
+    return ui.return_to_status();
+  }
+
+  if (ui.should_draw()) {
+    ui.flexible_clear_lcd(0, 0, 50, TFT_HEIGHT);
+    tft.canvas(18, 38, 284, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT_F(MSG_PRINT_FINISH));
+    tft.add_text(tft_string.center(284), 5, COLOR_WHITE, tft_string);
+
+    tft.canvas(18, 81, 284, 20);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(buffer);
+    tft.add_text(tft_string.center(284), tft_string.center(20), COLOR_WHITE, tft_string);
+
+    tft.canvas(105, 136, 110, 44);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgConfirm, COLOR_BLUE);
+  }
+}
+
+// Probe / calibration failure screen
+void Probing_Failed() {
+  if (ui.use_click()) {
+    ui.clear_all = false;
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      autoProbe.LeveingFailSattue = false;
+    #endif
+    ui.flexible_clear_lcd(0, 0, 50, TFT_HEIGHT);
+    ui.goto_previous_screen();
+    ui.previous_callbackFunc();
+    return;
+  }
+
+  if (ui.should_draw()) {
+    tft.canvas(18, 81, 284, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      if (autoProbe.LeveingFailSattue)
+        tft_string.set(GET_TEXT_F(MSG_MODULE_PROBE_FAILD));
+      else
+    #endif
+        tft_string.set(GET_TEXT_F(MSG_PROBE_FAILD));
+    tft.add_text(tft_string.center(284), 5, COLOR_WHITE, tft_string);
+
+    tft.canvas(105, 136, 110, 44);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgConfirm, COLOR_BLUE);
+  }
+}
+
+// React to special status strings set by G28/G29 and the calibration module
+void MarlinUI::StatusChange(const char * const msg) {
+  if (strncmp_P(msg, "Probing Failed", strlen_P("Probing Failed")) == 0) {
+    lcdLeveingstate = LEVEING_NONE;
+    motion.soft_endstop._enabled = false;
+    calibration_state = false;
+    queue.inject_P(PSTR("G1 Z20 F500"));
+    clear_all = true;
+    goto_screen(Probing_Failed);
+  }
+  else if (strncmp_P(msg, "CalibrationStart", strlen_P("CalibrationStart")) == 0) {
+    push_current_screen();
+    clear_all = true;
+    goto_screen([]{
+      if (should_draw()) MenuItem_static::draw(3, GET_TEXT_F(MSG_POSITION_CALIBRATION), 1, "...");
+    });
+  }
+  else if (strncmp_P(msg, "CalibrationDone", strlen_P("CalibrationDone")) == 0) {
+    calibration_state = false; // Do not show the homing tip
+    clear_all = false;
+    goto_previous_screen();
+    previous_callbackFunc();
+  }
+  else if (strncmp_P(msg, "HomingStart", strlen_P("HomingStart")) == 0) {
+    if (calibration_state || lcdLeveingstate || start_print_status) return;
+    push_current_screen();
+    clear_all = true;
+    goto_screen([]{
+      if (should_draw()) MenuItem_static::draw(3, GET_TEXT_F(MSG_HOMING));
+    });
+  }
+  else if (strncmp_P(msg, "HomingDone", strlen_P("HomingStart")) == 0) {
+    if (calibration_state || lcdLeveingstate || start_print_status) return;
+    clear_all = false;
+    goto_previous_screen();
+    previous_callbackFunc();
+  }
+}
+
+bool calibration_state = false;
+
 #endif // HAS_MARLINUI_MENU

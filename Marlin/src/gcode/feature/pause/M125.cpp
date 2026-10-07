@@ -97,6 +97,7 @@ void GcodeSuite::M125() {
 
   if (pause_print(retract, park_point, show_lcd, 0)) {
     if (ENABLED(HAS_DISPLAY) || ALL(EMERGENCY_PARSER, HOST_PROMPT_SUPPORT) || !sd_printing || show_lcd) {
+      TERN_(HAS_MARLINUI_MENU, ui.pausu_befor_event()); // Factory: show the runout screen / status
       wait_for_confirmation(false, 0);
       resume_print(0, 0, -retract, 0);
     }

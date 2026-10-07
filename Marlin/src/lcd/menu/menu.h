@@ -248,6 +248,9 @@ void tft_setTargetHotend();
 void tft_setTargetBed();
 void tft_set_speed();
 void tft_babystep_zoffset();
+void printinf_finish();
+void Probing_Failed();
+extern bool calibration_state;
 
 ////////////////////////////////////////////
 //////// Menu Item Helper Functions ////////

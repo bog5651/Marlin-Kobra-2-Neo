@@ -321,15 +321,18 @@ void MarlinUI::pause_show_message(
   const PauseMode mode/*=PAUSE_MODE_SAME*/,
   const uint8_t extruder/*=motion.extruder*/
 ) {
-  if (mode != PAUSE_MODE_SAME) pause_mode = mode;
-  hotend_status_extruder = extruder;
-  const screenFunc_t next_screen = ap_message_screen(message);
-  if (next_screen) {
-    ui.defer_status_screen();
-    ui.goto_screen(next_screen);
-  }
+  // Factory: the status screen and the custom pause screens replace the
+  // Marlin pause message screens.
+  UNUSED(message); UNUSED(mode); UNUSED(extruder);
+}
+
+// Called when a requested pause becomes active (M125)
+void MarlinUI::pausu_befor_event() {
+  pause_pending = false; // The requested pause is now active
+  if (runout.filament_ran_out)
+    goto_screen(runout_sensor);
   else
-    ui.return_to_status();
+    return_to_status();
 }
 
 #endif // HAS_MARLINUI_MENU && ADVANCED_PAUSE_FEATURE

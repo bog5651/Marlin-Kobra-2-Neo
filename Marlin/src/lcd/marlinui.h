@@ -261,6 +261,8 @@ public:
   static void flexible_clear_lcd(const uint16_t x, const uint16_t y, const uint16_t width, const uint16_t height);
   static void previous_callbackFunc();
   static void back_callbackFunc();
+  static void pausu_befor_event();
+  static void StatusChange(const char * const msg);
 
   MarlinUI() {
     TERN_(HAS_MARLINUI_MENU, currentScreen = status_screen);

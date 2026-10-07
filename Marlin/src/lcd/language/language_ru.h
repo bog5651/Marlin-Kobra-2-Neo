@@ -897,4 +897,30 @@ namespace LanguageTall_ru {
 namespace Language_ru {
   using namespace LanguageTall_ru;
   LSTR MSG_TEMP_UINT                      = _UxGT("°C");
+
+  // Factory (Anycubic) strings
+  LSTR MSG_HEATING_NOZZLE                 = _UxGT("Нагрев сопла");
+  LSTR MSG_MORE_CONFIG                    = _UxGT("Настройки");
+  LSTR MSG_ABOUT                          = _UxGT("О программе");
+  LSTR MSG_MODULE_CALIBRATION             = _UxGT("Калибровка модуля");
+  LSTR MSG_POSITION_CALIBRATION           = _UxGT("Калибровка позиции");
+  LSTR MSG_MOVE_X_1MM                     = _UxGT("Ось X 1мм");
+  LSTR MSG_MOVE_X_01MM                    = _UxGT("Ось X 0.1мм");
+  LSTR MSG_MOVE_Y_1MM                     = _UxGT("Ось Y 1мм");
+  LSTR MSG_MOVE_Y_01MM                    = _UxGT("Ось Y 0.1мм");
+  LSTR MSG_LEVEING_PREHEATING             = _UxGT("Нагрев");
+  LSTR MSG_LEVEING_WIPE                   = _UxGT("Протирка сопла");
+  LSTR MSG_LEVEING_PROBE                  = _UxGT("Проба");
+  LSTR MSG_PRINT_FINISH                   = _UxGT("Печать завершена");
+  LSTR MSG_FILAMENTLOADING                = _UxGT("Загрузка филамента...");
+  LSTR MSG_FILAMENTUNLOADING              = _UxGT("Выгрузка филамента...");
+  LSTR MSG_FILAMENT_STOP                  = _UxGT("Стоп и назад");
+  LSTR MSG_PROBE_FAILD                    = _UxGT("Сбой автоуровня");
+  LSTR MSG_MODULE_PROBE_FAILD             = _UxGT("Сбой калибровки");
+  LSTR MSG_READ_CARD_ERROR                = _UxGT("Ошибка чтения карты");
+  LSTR MSG_POWER_OUTAGE                   = _UxGT("Сбой питания");
+  LSTR MSG_HOMING_START                   = _UxGT("Начало парковки");
+  LSTR MSG_HOMING_DONE                    = _UxGT("Парковка завершена");
+  LSTR MSG_CALIBRATION_START              = _UxGT("Начало калибровки");
+  LSTR MSG_CALIBRATION_DONE               = _UxGT("Калибровка завершена");
 }

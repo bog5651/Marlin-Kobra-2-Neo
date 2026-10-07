@@ -34,8 +34,11 @@
   #include "../queue.h"
 #endif
 
-#if ANY(SET_PROGRESS_MANUALLY, SD_REPRINT_LAST_SELECTED_FILE)
+#if ANY(SET_PROGRESS_MANUALLY, SD_REPRINT_LAST_SELECTED_FILE, HAS_MARLINUI_MENU)
   #include "../../lcd/marlinui.h"
+#endif
+#if HAS_MARLINUI_MENU
+  #include "../../lcd/menu/menu.h"
 #endif
 
 #if ENABLED(POWER_LOSS_RECOVERY)
@@ -110,6 +113,11 @@ void GcodeSuite::M1001() {
   #endif
 
   TERN_(EXTENSIBLE_UI, ExtUI::onPrintDone());
+
+  #if HAS_MARLINUI_MENU
+    ui.print_task_done = true;
+    ui.goto_screen(printinf_finish);
+  #endif
 
   // Re-select the last printed file in the UI
   TERN_(SD_REPRINT_LAST_SELECTED_FILE, ui.reselect_last_file());

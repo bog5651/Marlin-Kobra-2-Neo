@@ -1872,6 +1872,7 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
 
     TERN_(STATUS_MESSAGE_SCROLLING, reset_status_scroll());
 
+    TERN_(HAS_MARLINUI_MENU, StatusChange(status_message)); // Factory: react to HomingStart/HomingDone/Calibration* strings
     TERN_(EXTENSIBLE_UI, ExtUI::onStatusChanged(status_message));
     TERN_(DWIN_CREALITY_LCD, dwinStatusChanged(status_message));
     TERN_(DWIN_CREALITY_LCD_JYERSUI, jyersDWIN.updateStatus(status_message));
