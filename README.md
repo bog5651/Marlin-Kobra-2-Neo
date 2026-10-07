@@ -1,6 +1,6 @@
 # Marlin-Kobra-2-Neo
 
-Порт заводской прошивки Anycubic Kobra 2 Neo на свежий стабильный Marlin.
+Порт заводской прошивки Anycubic Kobra 2 Neo на актуальную ветку Marlin.
 
 **Цель проекта** — на актуальной кодовой базе Marlin максимально точно
 воспроизвести поведение заводской прошивки Kobra 2 Neo: тот же экран, та же
@@ -8,10 +8,11 @@
 и с восстановленными возможностями Marlin, которые завод вырезал.
 
 English: Port of the stock ANYCUBIC Kobra 2 Neo firmware (Marlin bugfix-2.1.x,
-2023-02) onto stable Marlin 2.1.2.8, targeting maximum behavioral parity with
-the factory firmware.
+2023-02) onto current Marlin bugfix-2.1.x (2.1.3-dev), targeting maximum
+behavioral parity with the factory firmware.
 
-- База: Marlin **2.1.2.8** (тег `2.1.2.8`), рабочая ветка **`kobra2neo`**
+- База: Marlin **bugfix-2.1.x** (2.1.3-dev, пин `bbe7c655`, 2026-10-04),
+  рабочая ветка **`kobra2neo-bugfix21`**
 - Плата: TriGorilla V4.0.1 (GD32F303RGT6 в конфигурации STM32F103RE),
   окружение PlatformIO **`ac_tri_f1`**
 - Экран: ST7789 320x240 (SPI) + энкодер
@@ -20,57 +21,66 @@ the factory firmware.
 
 ## Что сделано относительно оригинального Marlin
 
-1. **Плата и сборка.** `BOARD_AC_TRI_F103RE` и пинмап
+1. **Плата и сборка.** `BOARD_AC_TRI_F103RE` (6203) и пинмап
    `pins_AC_TRI_F1_V1.h`, env `ac_tri_f1` (смещение загрузчика `0x9000`),
    `FLASH_EEPROM_EMULATION`, SDIO, вынос пинов TFT/энкодера/вентиляторов,
    образ под заводской загрузчик.
-2. **Заводской TFT-UI.** Карусельный статус-экран ST7789 и заводские экраны:
-   пауза/стоп, температуры, скорость, babystep Z, медиа/список файлов,
-   runout, удаление карты, завершение печати, калибровка, About. Свои
-   изображения и шрифты (`lcd/tft/*`, `lcd/menu/menu.cpp`, `lcd/marlinui.*`).
-3. **Заводской модуль автокалибровки Z.** `HAL/STM32/autoGetZoffset.*`,
+2. **Заводской модуль автокалибровки Z.** `HAL/STM32/autoGetZoffset.*`,
    G-коды **M2000–M2005**, отдельный сектор flash `0x0807E800`, хуки в
-   probe/endstops/G28/G29/motion/planner, экраны хода калибровки.
-4. **Конфигурация под железо.** Датчики Semitec 104GT-2 / EPCOS 100k,
+   probe/endstops/G28/G29, `Z_SAFETY_STOP` для состояния Z_MAX.
+3. **Конфигурация под железо.** Датчики Semitec 104GT-2 / EPCOS 100k,
    заводские PID, поле 220x220x250, инверсии осей, индуктивный probe
    {24, 13.35, 0}, Z_SAFE_HOMING, BILINEAR **7x7** (завод — 5x5), входной
    шейпинг, LIN_ADVANCE, runout, вентиляторы, PLR, ADVANCED_PAUSE.
-5. **Портированные заводские фиксы.** Экран завершения печати (M1001),
-   событие паузы M125, перезапуск таймера печати по M117 (A3), устойчивость к
-   извлечению SD, сброс wait-флагов при аборте, `set_all_unhomed()` после
-   M18/M84, upstream-семантика `do_z_clearance`/feedrate, сохранение позиций
-   через abort/auto-level, сброс позиции модуля при M502.
-6. **Исправленные баги порта.** Возобновление печати после паузы (deadlock
-   Purge-more) и полная остановка печати: нагрев и моторы выключаются
-   (`G28XY` + `M84`).
-7. **Включено сверх завода.** `ENABLE_LEVELING_FADE_HEIGHT`,
+   Второй язык LCD — русский, шрифт NOTOSANS (кириллица upstream).
+4. **TFT-драйвер.** Заводская инициализация ST7789 (без SWRESET, MADCTL
+   0xB0), задержка включения панели, CS; upstream-путь DMA сохранён и
+   починен: фикс `SPI_1LINE_TX` после `HAL_SPI_Init` (BIDIOE) + таймаут
+   зависшей передачи. Синхронный режим через `TFT_SHARED_IO`.
+5. **Портированные заводские фиксы.** Устойчивость к извлечению SD
+   (watchdog + перепроверка), сброс wait-флагов при аборте, полная остановка
+   печати (нагрев и моторы), `set_all_unhomed()` после M18/M84, сохранение
+   позиций через abort/auto-level, сброс позиции модуля при M502,
+   `EVENT_GCODE_AFTER_G29 "G28XY"`, purge_pending для PLR.
+6. **Включено сверх завода.** `ENABLE_LEVELING_FADE_HEIGHT`,
    `SDCARD_SORT_ALPHA`, `SCROLL_LONG_FILENAMES`, `G26_MESH_VALIDATION`,
    `EMERGENCY_PARSER`, `HOST_ACTION_COMMANDS`/`HOST_PROMPT_SUPPORT`,
    `MEATPACK_ON_SERIAL_PORT_1`, `PID_EDIT_MENU`/`PID_AUTOTUNE_MENU`,
-   `SHAPING_MENU`; восстановлены пункты меню Store/Load Settings,
-   Power Outage, Preheat, Advanced Settings, Input Shaping и Advance K,
-   добавлен экран Mesh Viewer (сетка 7×7); дёргание part-fan вокруг проб
-   вынесено в опцию `PROBING_PART_COOLING_FAN`. Полный список с методикой
-   проверки — [`docs/ENABLED_VS_STOCK.md`](docs/ENABLED_VS_STOCK.md).
+   `SHAPING_MENU`; дёргание part-fan вокруг проб вынесено в опцию
+   `PROBING_PART_COOLING_FAN`. Полный список с методикой проверки —
+   [`docs/ENABLED_VS_STOCK.md`](docs/ENABLED_VS_STOCK.md).
+
+## Отложено (следующие задачи)
+
+- **Стоковый TFT-UI** (карусельный статус-экран, заводские меню, изображения,
+  RU-строки, экраны M1001/M125/M117 и Mesh Viewer). Upstream переписал
+  архитектуру TFT (`ui_color_ui.cpp` + темы + шрифты), поэтому заводской UI
+  переносится заново на новую архитектуру отдельной задачей. Референс —
+  ветка `kobra2neo` (база 2.1.2.8). Текущая ветка собирается со штатным
+  Marlin TFT UI.
+- **Асинхронный DMA** (P2 в бэклоге): UI нужно переработать под очередь кадров.
+- **Стоковый Power-Loss Recovery** (сектор `0x0807F000` + детект просадки по
+  ADC): пока upstream PLR (файл `/PLR` на SD); отдельная фаза с тестом
+  обесточивания.
+- **`-O0` / `build_type = debug`**: перевод на `-Os` — отдельный шаг с
+  приёмкой на принтере.
 
 ## Что намеренно не перенесено с завода
 
 | Момент | Причина |
 |---|---|
 | `-O0` и `build_type = debug` в релизной сборке | оставлено как есть; перевод на `-Os` — отдельный шаг с проверкой на принтере |
-| Стоковый Power-Loss Recovery (сектор `0x0807F000` + детект просадки по ADC) | пока upstream PLR (файл `/PLR` на SD); стоковая схема — отдельная фаза с тестом обесточивания |
+| Стоковый Power-Loss Recovery (сектор `0x0807F000` + детект просадки по ADC) | пока upstream PLR; стоковая схема — отдельная фаза с тестом обесточивания |
 | A4: имя оси в сообщении `kill()` | диагностика; заводская машина состояний хоминга мертва |
 | A10: `MINIMUM_STEPPER_POST_DIR_DELAY 60000` | ~60 мкс на смену направления тормозит генерацию шагов; заводская stepper-обвязка в порт не вошла |
 | A11: убрать `is_idling` из PID-выхода | снимает idle-таймаут нагрева — снижает безопасность |
-| Purge-more в M600 (в стоке отключён через `while(0)`) | у кастомного UI нет экрана; активное ожидание было причиной зависания паузы |
-| M0/M1, M575, `BINARY_FILE_TRANSFER`, `ADVANCED_OK`/`NO_TIMEOUTS` | не нужны для SD-печати и этого UI; экономия flash |
-| `PRINTJOB_TIMER_AUTOSTART` | таймером управляет кастомный UI (иначе двойной учёт) |
+| M0/M1, M575, `BINARY_FILE_TRANSFER`, `ADVANCED_OK`/`NO_TIMEOUTS` | не нужны для SD-печати; экономия flash |
+| `PRINTJOB_TIMER_AUTOSTART` | как в стоке; пересмотреть вместе с UI-портом |
 | `ULTIPANEL_FEEDMULTIPLY` | конфликтует с карусельным энкодером |
-| Блокирующий SPI вместо DMA (заводской обход зависания DMA) | сохранён как в стоке; перевод на DMA — тех-долг после проверки на железе |
 | Busy-wait циклы нагрева в модуле калибровки | сохранены до проверки на железе |
 
 Намеренные отклонения от заводского поведения: сетка BILINEAR 7x7 вместо 5x5
-(точнее автоуровень), `Z_PROBE_END_SCRIPT "G28XY"` без `M84` (чтобы G29 в
+(точнее автоуровень), `EVENT_GCODE_AFTER_G29 "G28XY"` без `M84` (чтобы G29 в
 начале печати не помечал оси нехоженными) и выключенный заводской
 `DEBUG_LEVELING_FEATURE` (отладочный режим).
 
@@ -87,12 +97,11 @@ pio run -e ac_tri_f1
 
 ## Статус
 
-- Сборка `ac_tri_f1`: **SUCCESS**, Flash 404 216 / 481 280 (84.0%),
-  RAM 37 012 / 65 536 (56.5%).
-- UI quick wins (Store/Load Settings, Power Outage, Preheat, Advanced
-  Settings с PID-тюном, Input Shaping, Advance K, экран Mesh Viewer)
-  собраны; ждут проверки на принтере; чек-лист приёмки — в документации
-  проекта.
+- Сборка `ac_tri_f1`: **SUCCESS**, Flash 335 332 / 481 280 (69.7%),
+  RAM 48 412 / 65 536 (73.9%), `-O0` debug.
+- Миграция на bugfix-2.1.x выполнена (rebase 42 коммитов порта; стоковый UI
+  отложен). Приёмка на принтере — по чек-листу проекта; `M503` сверять с
+  `docs/baseline-m503-stock.txt`.
 
 ---
 
