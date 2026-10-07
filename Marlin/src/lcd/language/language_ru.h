@@ -924,4 +924,27 @@ namespace Language_ru {
   LSTR MSG_HOMING_DONE                    = _UxGT("Парковка завершена");
   LSTR MSG_CALIBRATION_START              = _UxGT("Начало калибровки");
   LSTR MSG_CALIBRATION_DONE               = _UxGT("Калибровка завершена");
+
+  // Upstream strings that had no RU translation (factory wording)
+  LSTR MSG_BACKLASH_N                     = _UxGT("@");
+  LSTR MSG_ERROR                          = _UxGT("Ошибка");
+  LSTR MSG_FILAMENT_SET                   = _UxGT("Настройки филамента");
+  LSTR MSG_HIGH                           = _UxGT("ВЫСОКИЙ");
+  LSTR MSG_HOMING                         = _UxGT("Парковка...");
+  LSTR MSG_LOW                            = _UxGT("НИЗКИЙ");
+  LSTR MSG_MARLIN                         = _UxGT("Marlin");
+  LSTR MSG_PID_C                          = _UxGT("PID-C");
+  LSTR MSG_PID_C_E                        = _UxGT("PID-C *");
+  LSTR MSG_PID_D                          = _UxGT("PID-D");
+  LSTR MSG_PID_D_E                        = _UxGT("PID-D *");
+  LSTR MSG_PID_F                          = _UxGT("PID-F");
+  LSTR MSG_PID_F_E                        = _UxGT("PID-F *");
+  LSTR MSG_PID_I                          = _UxGT("PID-I");
+  LSTR MSG_PID_I_E                        = _UxGT("PID-I *");
+  LSTR MSG_PID_P                          = _UxGT("PID-P");
+  LSTR MSG_PID_P_E                        = _UxGT("PID-P *");
+  LSTR MSG_PREHEAT_2                      = _UxGT("Преднагрев ") PREHEAT_2_LABEL;
+  LSTR MSG_PREHEAT_3                      = _UxGT("Преднагрев ") PREHEAT_3_LABEL;
+  LSTR MSG_TF_CARD_REMOVED                = _UxGT("Карта извлечена");
+  LSTR MSG_Z_AFTER_HOME                   = _UxGT("Z после парковки");
 }

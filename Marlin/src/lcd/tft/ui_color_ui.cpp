@@ -93,7 +93,7 @@ void MarlinUI::tft_idle() {
     tft.canvas(0, 0, TFT_WIDTH, TFT_HEIGHT);
     tft.set_background(COLOR_BACKGROUND);
     tft.add_image(BOOTSCREEN_LOGO_X, BOOTSCREEN_LOGO_Y, imgBootScreen);
-    #ifdef WEBSITE_URL
+    #if defined(WEBSITE_URL) && !defined(BOOTSCREEN_NO_SITE_URL)
       tft_string.set(WEBSITE_URL);
       tft.add_text(tft_string.center(TFT_WIDTH), BOOTSCREEN_SITE_URL_Y, COLOR_WEBSITE_URL, tft_string);
     #endif

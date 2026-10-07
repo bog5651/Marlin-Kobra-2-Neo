@@ -134,6 +134,7 @@ extern const tImage NoLogo;
   extern const tImage MarlinLogo480x320x16;
   extern const tImage MarlinLogo576x478x16;
   extern const tImage MarlinLogo1024x600x16;
+  extern const tImage AnycubicLogo320x240x16; // Factory (Anycubic) boot logo
 #endif
 extern const tImage Background320x30x16;
 

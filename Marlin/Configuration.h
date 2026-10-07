@@ -3593,6 +3593,12 @@
   #define TFT_SHARED_IO    // Sync DMA: async frame queue races with the encoder UI (see docs/dma-experiment.md)
 
   #define COMPACT_MARLIN_BOOT_LOGO  // Use compressed data to save Flash space
+
+  // Factory (Anycubic) boot logo, shown by SHOW_BOOTSCREEN (Configuration_adv.h)
+  #define BOOTSCREEN_LOGO   AnycubicLogo320x240x16
+  #define BOOTSCREEN_LOGO_W 320
+  #define BOOTSCREEN_LOGO_H 240
+  #define BOOTSCREEN_NO_SITE_URL    // The factory logo has no website line
 #endif
 
 #if ENABLED(TFT_LVGL_UI)
