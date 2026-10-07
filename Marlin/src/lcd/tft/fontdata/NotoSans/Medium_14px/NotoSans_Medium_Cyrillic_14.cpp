@@ -22,7 +22,7 @@
 
 #include "../../fontdata.h"
 
-#if HAS_GRAPHICAL_TFT && TFT_FONT == NOTOSANS
+#if HAS_GRAPHICAL_TFT && (TFT_FONT == NOTOSANS || TFT_FONT == HELVETICA)
 
 // NotoSans Medium Cyrillic 19pt, capital 'A' height: 14px, width: 100%, range: 0x0401-0x0491, glyphs: 74
 extern const uint8_t NotoSans_Medium_Cyrillic_14[3616] = {

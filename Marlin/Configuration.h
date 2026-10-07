@@ -3574,9 +3574,10 @@
    * NOTOSANS  - Default font with anti-aliasing. Supports Latin Extended and non-Latin characters.
    * UNIFONT   - Lightweight font, no anti-aliasing. Supports Latin Extended and non-Latin characters.
    * HELVETICA - Lightweight font, no anti-aliasing. Supports Basic Latin (0x0020-0x007F) and Latin-1 Supplement (0x0080-0x00FF) characters only.
+   *             For Cyrillic languages it pairs with a 14px NotoSans companion font.
    * :['NOTOSANS', 'UNIFONT', 'HELVETICA']
    */
-  #define TFT_FONT  NOTOSANS
+  #define TFT_FONT  HELVETICA
 
   /**
    * TFT Theme for Color UI. Choose one of the following or add a new one to 'Marlin/src/lcd/tft/themes' directory
@@ -3584,9 +3585,10 @@
    * BLUE_MARLIN  - Default theme with 'midnight blue' background
    * BLACK_MARLIN - Theme with 'black' background
    * ANET_BLACK   - Theme used for Anet ET4/5
-   * :['BLUE_MARLIN', 'BLACK_MARLIN', 'ANET_BLACK']
+   * ANYCUBIC     - Factory Anycubic Kobra 2 Neo palette
+   * :['BLUE_MARLIN', 'BLACK_MARLIN', 'ANET_BLACK', 'ANYCUBIC']
    */
-  #define TFT_THEME BLACK_MARLIN
+  #define TFT_THEME ANYCUBIC
 
   #define TFT_SHARED_IO    // Sync DMA: async frame queue races with the encoder UI (see docs/dma-experiment.md)
 

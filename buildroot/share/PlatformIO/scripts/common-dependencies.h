@@ -330,6 +330,9 @@
   #elif TFT_FONT == HELVETICA
     #if FONT_SIZE == 14
       #define TFT_FONT_HELVETICA_14
+      #if FONT_EXTRA == Cyrillic
+        #define TFT_FONT_HELVETICA_14_CYRIL
+      #endif
     #elif FONT_SIZE == 19
       #define TFT_FONT_HELVETICA_19
     #endif
