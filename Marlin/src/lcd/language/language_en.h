@@ -170,7 +170,7 @@ namespace LanguageNarrow_en {
   LSTR MSG_PAUSE_PRINT                    = _UxGT("Pause Print");
   LSTR MSG_RESUME_PRINT                   = _UxGT("Resume Print");
   LSTR MSG_STOP_PRINT                     = _UxGT("Stop Print");
-  LSTR MSG_TEMP_UINT                      = _UxGT("℃");
+  LSTR MSG_TEMP_UINT                      = _UxGT("°C");
   LSTR MSG_TF_CARD_REMOVED                = _UxGT("TF Card Removed");
   LSTR MSG_MEDIA_MENU                     = MEDIA_TYPE_EN _UxGT(" Print");
   LSTR MSG_NO_MEDIA                       = _UxGT("No ") MEDIA_TYPE_EN _UxGT(" Detected");

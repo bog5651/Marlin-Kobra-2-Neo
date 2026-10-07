@@ -1176,10 +1176,24 @@ void MarlinUI::init() {
         // Wake the display for any encoder movement
         static int8_t lastEncoderDiff;
         if (lastEncoderDiff != encoderDiff) wake_display();
-        lastEncoderDiff = encoderDiff;
 
         // Did the encoder turn by more than "Encoder Pulses Per Step" ticks?
-        const uint8_t abs_diff = ABS(encoderDiff);
+        uint8_t abs_diff = ABS(encoderDiff);
+
+        #if ENCODER_PULSES_PER_STEP > 1
+          // When reversing the encoder direction, a movement step can be missed because
+          // encoderDiff has a non-zero residual value, making the controller unresponsive.
+          // Clear the residual when the encoder is idle and promote a past-half-step to a full step.
+          if (encoderDiff == lastEncoderDiff && abs_diff <= epps / 2)
+            encoderDiff = 0;
+          else if (WITHIN(abs_diff, epps / 2 + 1, epps - 1)) {
+            abs_diff = epps;
+            encoderDiff = (encoderDiff < 0 ? -1 : 1) * abs_diff;
+          }
+        #endif
+
+        lastEncoderDiff = encoderDiff;
+
         const bool encoderPastThreshold = (abs_diff >= epps);
 
         if (encoderPastThreshold && TERN1(IS_TFTGLCD_PANEL, !external_control)) {
@@ -1217,12 +1231,9 @@ void MarlinUI::init() {
 
           #endif // ENCODER_RATE_MULTIPLIER
 
-          const int8_t fullSteps = encoderDiff / epps;
-          if (fullSteps != 0) {
-            encoderDiff -= fullSteps * epps;
-            if (can_encode() && !lcd_clicked)
-              encoderPosition += (fullSteps * encoder_multiplier);
-          }
+          if (can_encode() && !lcd_clicked)
+            encoderPosition += (encoderDiff * encoder_multiplier) / epps;
+          encoderDiff = 0;
         }
 
         // Has the wheel advanced by a step or the encoder done a click?
