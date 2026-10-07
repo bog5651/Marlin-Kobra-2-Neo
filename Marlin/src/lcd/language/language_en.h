@@ -170,6 +170,8 @@ namespace LanguageNarrow_en {
   LSTR MSG_PAUSE_PRINT                    = _UxGT("Pause Print");
   LSTR MSG_RESUME_PRINT                   = _UxGT("Resume Print");
   LSTR MSG_STOP_PRINT                     = _UxGT("Stop Print");
+  LSTR MSG_TEMP_UINT                      = _UxGT("℃");
+  LSTR MSG_TF_CARD_REMOVED                = _UxGT("TF Card Removed");
   LSTR MSG_MEDIA_MENU                     = MEDIA_TYPE_EN _UxGT(" Print");
   LSTR MSG_NO_MEDIA                       = _UxGT("No ") MEDIA_TYPE_EN _UxGT(" Detected");
   LSTR MSG_DWELL                          = _UxGT("Sleep...");
@@ -305,9 +307,9 @@ namespace LanguageNarrow_en {
   LSTR MSG_UBL_BC_REMOVE                  = _UxGT("Remove & Measure Bed");
   LSTR MSG_UBL_MOVING_TO_NEXT             = _UxGT("Moving to next");
   LSTR MSG_UBL_SET_TEMP_BED               = _UxGT("Bed Temp");
-  LSTR MSG_UBL_BED_TEMP_CUSTOM            = _UxGT("Bed Temp");
+  LSTR MSG_UBL_BED_TEMP_CUSTOM            = _UxGT("HotBed Temp");
   LSTR MSG_UBL_SET_TEMP_HOTEND            = _UxGT("Hotend Temp");
-  LSTR MSG_UBL_HOTEND_TEMP_CUSTOM         = _UxGT("Hotend Temp");
+  LSTR MSG_UBL_HOTEND_TEMP_CUSTOM         = _UxGT("Nozzle Temp");
   LSTR MSG_UBL_EDIT_CUSTOM_MESH           = _UxGT("Edit Custom Mesh");
   LSTR MSG_UBL_FINE_TUNE_MESH             = _UxGT("Fine Tuning Mesh");
   LSTR MSG_UBL_DONE_EDITING_MESH          = _UxGT("Done Editing Mesh");
@@ -356,7 +358,7 @@ namespace LanguageNarrow_en {
   LSTR MSG_UBL_NO_STORAGE                 = _UxGT("No Storage");
   LSTR MSG_UBL_SAVE_ERROR                 = _UxGT("UBL Save Error");
   LSTR MSG_UBL_RESTORE_ERROR              = _UxGT("UBL Restore Error");
-  LSTR MSG_UBL_Z_OFFSET                   = _UxGT("Z-Offset: ");
+  LSTR MSG_UBL_Z_OFFSET                   = _UxGT("Z Offset");
   LSTR MSG_UBL_Z_OFFSET_STOPPED           = _UxGT("Z-Offset Stopped");
   LSTR MSG_UBL_STEP_BY_STEP_MENU          = _UxGT("Step-By-Step UBL");
   LSTR MSG_UBL_1_BUILD_COLD_MESH          = _UxGT("1. Build Cold Mesh");
@@ -500,7 +502,7 @@ namespace LanguageNarrow_en {
   LSTR MSG_FILAMENT_CHANGE_OPTION_HEADER  = _UxGT("RESUME OPTIONS:");
   LSTR MSG_FILAMENT_CHANGE_OPTION_PURGE   = _UxGT("Purge more");
   LSTR MSG_FILAMENT_CHANGE_NOZZLE         = _UxGT("  Nozzle: ");
-  LSTR MSG_RUNOUT_SENSOR                  = _UxGT("Runout Sensor");
+  LSTR MSG_RUNOUT_SENSOR                  = _UxGT("Filament Abnormal");
   LSTR MSG_RUNOUT_DISTANCE_MM             = _UxGT("Runout Dist mm");
   LSTR MSG_KILL_HOMING_FAILED             = _UxGT("Homing Failed");
   LSTR MSG_LCD_PROBING_FAILED             = _UxGT("Probing Failed");

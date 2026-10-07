@@ -32,6 +32,8 @@
 
 FilamentMonitor runout;
 
+uint8_t FilamentSensorBase::state_original = FIL_RUNOUT_STATE;
+
 bool FilamentMonitorBase::enabled = true,
      FilamentMonitorBase::filament_ran_out; // = false
 
@@ -65,6 +67,7 @@ bool FilamentMonitorBase::enabled = true,
 #include "../MarlinCore.h"
 #include "pause.h"
 #include "../gcode/queue.h"
+#include "../lcd/marlinui.h"
 
 #if ENABLED(HOST_ACTION_COMMANDS)
   #include "host_actions.h"
@@ -75,8 +78,6 @@ bool FilamentMonitorBase::enabled = true,
 #endif
 
 void event_filament_runout(const uint8_t extruder) {
-
-  runout.init_for_restart(false); // Reset and disable
 
   if (did_pause_print) return;  // Action already in progress. Purge triggered repeated runout.
 
@@ -135,22 +136,8 @@ void event_filament_runout(const uint8_t extruder) {
   #endif // HOST_ACTION_COMMANDS
 
   #ifdef FILAMENT_RUNOUT_SCRIPT
-    if (run_runout_script) {
-      #if MULTI_FILAMENT_SENSOR
-        MString<strlen(FILAMENT_RUNOUT_SCRIPT)> script;
-        script.setf(F(FILAMENT_RUNOUT_SCRIPT), C(tool));
-        #if ENABLED(FILAMENT_RUNOUT_SENSOR_DEBUG)
-          SERIAL_ECHOLNPGM("Runout Command: ", &script);
-        #endif
-        queue.inject(&script);
-      #else
-        #if ENABLED(FILAMENT_RUNOUT_SENSOR_DEBUG)
-          SERIAL_ECHOPGM("Runout Command: ");
-          SERIAL_ECHOLNPGM(FILAMENT_RUNOUT_SCRIPT);
-        #endif
-        queue.inject(F(FILAMENT_RUNOUT_SCRIPT));
-      #endif
-    }
+    if (run_runout_script)
+      ui.pause_print(); // Stock behavior: pause the print and let the UI show the runout screen
   #endif
 }
 

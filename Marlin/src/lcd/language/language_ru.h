@@ -896,4 +896,5 @@ namespace LanguageTall_ru {
 
 namespace Language_ru {
   using namespace LanguageTall_ru;
+  LSTR MSG_TEMP_UINT                      = _UxGT("℃");
 }

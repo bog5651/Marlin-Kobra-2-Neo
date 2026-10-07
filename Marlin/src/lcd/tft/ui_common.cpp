@@ -218,8 +218,23 @@ void text_line(const uint16_t y, uint16_t color) {
 }
 
 void menu_line(const uint8_t row, uint16_t color) {
-  cursor.set(0, row);
-  text_line(MENU_TOP_LINE_Y + cursor.y * MENU_LINE_HEIGHT, color);
+  if (!ui.clear_all && !ui.confirm_windown_enabled && (ui.seclect == 1 || ui.seclect == 2)) {
+    // Keep the factory sidebar visible
+    cursor.set(50, row);
+    tft.canvas(50, MENU_TOP_LINE_Y + cursor.y * MENU_LINE_HEIGHT, TFT_WIDTH - 50, MENU_ITEM_HEIGHT);
+    tft.set_background(color);
+  }
+  else {
+    if (!ui.clear_all) {
+      cursor.set(20, row);
+      tft.canvas(20, MENU_TOP_LINE_Y + cursor.y * MENU_LINE_HEIGHT, TFT_WIDTH - 40, MENU_ITEM_HEIGHT);
+    }
+    else {
+      cursor.set(0, row);
+      tft.canvas(0, MENU_TOP_LINE_Y + cursor.y * MENU_LINE_HEIGHT, TFT_WIDTH, MENU_ITEM_HEIGHT);
+    }
+    tft.set_background(color);
+  }
 }
 
 uint16_t menu_item(const uint8_t row, const bool sel) {
@@ -450,11 +465,23 @@ void MarlinUI::clear_lcd() {
   #endif
 
   tft.queue.reset();
-  tft.fill(0, 0, TFT_WIDTH, TFT_HEIGHT, COLOR_BACKGROUND);
-  cursor.set(0, 0);
+  if (!clear_all && !confirm_windown_enabled) {
+    // Keep the factory sidebar area (0..49) intact
+    tft.fill(50, 0, TFT_WIDTH - 50, TFT_HEIGHT, COLOR_BACKGROUND);
+    cursor.set(50, 0);
+  }
+  else {
+    tft.fill(0, 0, TFT_WIDTH, TFT_HEIGHT, COLOR_BACKGROUND);
+    cursor.set(0, 0);
+  }
 }
 
 void MarlinUI::clear_for_drawing() { clear_lcd(); }
+
+void MarlinUI::flexible_clear_lcd(const uint16_t x, const uint16_t y, const uint16_t width, const uint16_t height) {
+  tft.fill(x, y, width, height, COLOR_BACKGROUND);
+  tft.queue.async();
+}
 
 #if HAS_LCD_BRIGHTNESS
 

@@ -30,6 +30,15 @@
 
 #include "menu_item.h"
 #include "../../sd/cardreader.h"
+#include "../../feature/runout.h"
+
+#if ENABLED(POWER_LOSS_RECOVERY)
+  #include "../../feature/powerloss.h"
+#endif
+
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../../HAL/STM32/autoGetZoffset.h"
+#endif
 
 void lcd_sd_updir() {
   ui.encoderPosition = card.cdup() ? ENCODER_STEPS_PER_MENU_ITEM : 0;
@@ -53,9 +62,25 @@ void lcd_sd_updir() {
 #endif
 
 inline void sdcard_start_selected_file() {
+  #if ENABLED(POWER_LOSS_RECOVERY)
+    recovery.info.sdpos = 0;
+  #endif
+  #if ENABLED(LEVEING_CALIBRATION_MODULE)
+    autoProbe.swtich_cool_fan = true;
+    autoProbe.down_error_count = 0;
+    autoProbe.up_error_count = 0;
+  #endif
+  motion.feedrate_percentage = 100;
+  ui.real_duration_state = false;
+  runout.filament_ran_out = false; // Clear status each time you print
+  ui.start_print_status = true;
+  ui.pause_pending = false;
   card.openAndPrintFile(card.filename);
+  ui.clear_all = true;
   ui.return_to_status();
   ui.reset_status();
+  ui.clear_all = false;
+  ui.seclect = 4;
 }
 
 class MenuItem_sdfile : public MenuItem_sdbase {

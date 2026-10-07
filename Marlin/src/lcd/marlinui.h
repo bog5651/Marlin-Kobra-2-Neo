@@ -244,6 +244,24 @@ public:
 
   static LCDLeveingState lcdLeveingstate;
 
+  // Factory (Anycubic) UI state
+  static uint16_t seclect;           // Carousel selection: 1 = Settings, 2..7 = tiles
+  static bool start_print_status;    // Status screen shows the print-in-progress layout
+  static bool print_task_done;       // Finish screen is up; do not overdraw the status screen
+  static bool pause_pending;         // A pause/resume request is queued but not yet executed
+  static bool clear_all;             // Draw full-screen (hide the factory sidebar)
+  static bool confirm_windown_enabled, last_confirm_windown_enabled;
+  static bool real_duration_state;
+  static float temp_probe_zoffset;
+  static bool fresh_flag;
+  static void real_duration() { real_duration_state = true; }
+  static bool get_real_duration() { return real_duration_state; }
+  static float getzoffset();
+  static void setzoffset(const float value);
+  static void flexible_clear_lcd(const uint16_t x, const uint16_t y, const uint16_t width, const uint16_t height);
+  static void previous_callbackFunc();
+  static void back_callbackFunc();
+
   MarlinUI() {
     TERN_(HAS_MARLINUI_MENU, currentScreen = status_screen);
   }
@@ -740,6 +758,8 @@ public:
     static bool selection;
     static void set_selection(const bool sel) { selection = sel; }
     static bool update_selection();
+    static uint8_t multi_selection;
+    static uint8_t update_multi_selection(const uint8_t num);
 
     static void synchronize(FSTR_P const msg=nullptr);
 

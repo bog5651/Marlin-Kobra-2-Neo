@@ -24,7 +24,13 @@
 
 #include "../gcode/parser.h" // for axis_is_rotational, using_inch_units
 #include "../module/stepper.h"
+#include "../module/probe.h"
+#include "../module/endstops.h"
 #include "../feature/runout.h"
+
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../HAL/STM32/autoGetZoffset.h"
+#endif
 
 #if HAS_LED_POWEROFF_TIMEOUT || ALL(HAS_WIRED_LCD, PRINTER_EVENT_LEDS) || (HAS_BACKLIGHT_TIMEOUT && defined(NEOPIXEL_BKGD_INDEX_FIRST))
   #include "../feature/leds/leds.h"
@@ -440,6 +446,28 @@ void MarlinUI::init() {
 
     LCDLeveingState MarlinUI::lcdLeveingstate; // Kobra2 Neo module shim
 
+    // Factory (Anycubic) UI state
+    uint16_t MarlinUI::seclect = 2;
+    bool MarlinUI::start_print_status;
+    bool MarlinUI::print_task_done;
+    bool MarlinUI::pause_pending;
+    bool MarlinUI::clear_all;
+    bool MarlinUI::confirm_windown_enabled, MarlinUI::last_confirm_windown_enabled;
+    bool MarlinUI::real_duration_state;
+    float MarlinUI::temp_probe_zoffset;
+    bool MarlinUI::fresh_flag;
+
+    float MarlinUI::getzoffset() { return probe.offset.z; }
+    void MarlinUI::setzoffset(const float value) { probe.offset.z = value; }
+
+    void MarlinUI::back_callbackFunc() {
+      #if ENABLED(LEVEING_CALIBRATION_MODULE)
+        autoProbe.can_move_calibration = false;
+      #endif
+      manual_move.menu_scale = 1.0;
+      motion.soft_endstop._enabled = true;
+    }
+
     screenFunc_t MarlinUI::currentScreen; // Initialized in CTOR
     bool MarlinUI::screen_changed;
 
@@ -706,13 +734,54 @@ void MarlinUI::init() {
     if (did_expire) reset_status();
 
     #if HAS_MARLINUI_MENU
+
+      if (print_task_done) return; // Do not overdraw the finish screen
+
+      const bool busy = marlin.printingIsActive(),
+                 Paused = marlin.printingIsPaused();
+
       if (use_click()) {
-        #if ALL(FILAMENT_LCD_DISPLAY, HAS_MEDIA)
-          pause_filament_display();
-        #endif
-        goto_screen(menu_main);
-        reinit_lcd(); // Revive a noisy shared SPI LCD
-        return;
+        switch (seclect) {
+          case 1: // Settings
+            return goto_screen(menu_main);
+          case 2: // SD / Pause / Resume
+            if (busy || Paused) {
+              if (marlin.wait_for_user || Paused || did_pause_print) {
+                if (READ(FIL_RUNOUT_PIN) != runout.get_state_original())
+                  return goto_screen(runout_sensor);
+                clear_all = false;
+                runout.filament_ran_out = false;
+                resume_print();                 // Clear the wait and continue the print
+              }
+              else if (!pause_pending)
+                return goto_screen(tft_pause_print);
+            }
+            else
+              return goto_screen(menu_file_selector);
+            break;
+          case 3: // Preheat / Stop
+            if ((busy || Paused) && (card.isPrinting() || did_pause_print))
+              return goto_screen(tft_stop_print);
+            else if (!Paused && !busy) {
+              thermalManager.temp_hotend[0].target = 190;
+              thermalManager.temp_bed.target = 60;
+            }
+            break;
+          case 4: // Nozzle temperature
+            clear_all = true;
+            return goto_screen(tft_setTargetHotend);
+          case 5: // Bed temperature
+            clear_all = true;
+            return goto_screen(tft_setTargetBed);
+          case 6: // Speed
+            clear_all = true;
+            return goto_screen(tft_set_speed);
+          case 7: // Z-offset
+            temp_probe_zoffset = getzoffset();
+            fresh_flag = true;
+            clear_all = true;
+            return goto_screen(tft_babystep_zoffset);
+        }
       }
 
     #endif
@@ -776,6 +845,26 @@ void MarlinUI::init() {
       }
 
     #endif // ULTIPANEL_FLOWPERCENT
+
+    #if HAS_MARLINUI_MENU
+      // Factory carousel: rotate the encoder to change the selected tile
+      if (int16_t(encoderPosition) >= 1) {
+        seclect++;
+        if (seclect > 7) seclect = 7;
+        encoderPosition = 0;
+      }
+      else if (int16_t(encoderPosition) <= -1) {
+        if (!busy && !Paused) {           // The preheat slot is unreachable while printing
+          if (seclect == 1) seclect = 1;
+          else seclect--;
+        }
+        else {
+          if (seclect == 2) seclect = 2;
+          else seclect--;
+        }
+        encoderPosition = 0;
+      }
+    #endif
 
     draw_status_screen();
   }
@@ -1825,11 +1914,14 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
 #if HAS_DISPLAY
 
   void MarlinUI::abort_print() {
+    pause_pending = false;
     #if HAS_MEDIA
       marlin.end_waiting();
       queue.clear();                        // Drop stale M25/M24 so a blocked M125 cannot re-enter M125
       did_pause_print = 0;
       runout.filament_ran_out = false;
+      clear_all = start_print_status = false;
+      seclect = 2;                          // Leave the preheat slot disarmed
       thermalManager.disable_all_heaters(); // Heat off now, even if loop() is currently blocked
       stepper.disable_all_steppers();
       if (card.isStillPrinting())
@@ -1875,10 +1967,18 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
    *   - For a host-only printer tell the host to pause the print in progress.
    */
   void MarlinUI::pause_print() {
+    if (pause_pending || marlin.printingIsPaused() || did_pause_print) return; // Pause already active or requested
+    pause_pending = true;
     #if HAS_MARLINUI_MENU
-      synchronize(GET_TEXT_F(MSG_PAUSING));
-      defer_status_screen();
+      clear_all = true;
+      if (print_job_timer.duration() > 2 && !marlin.wait_for_heatup) {
+        marlin.idle();
+        synchronize(GET_TEXT_F(MSG_PAUSING));
+        marlin.idle();
+        defer_status_screen();
+      }
     #endif
+    marlin.wait_for_heatup = false;
 
     wake_display();
 
@@ -1897,6 +1997,7 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
   }
 
   void MarlinUI::resume_print() {
+    pause_pending = false;
     reset_status();
     TERN_(PARK_HEAD_ON_PAUSE, marlin.end_waiting());
     TERN_(HAS_MEDIA, if (card.isPaused()) queue.inject_P(M24_STR));
@@ -2027,8 +2128,24 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
           else
             LCD_MESSAGE(MSG_MEDIA_REMOVED);
 
-          if (ENABLED(HAS_WIRED_LCD) || !defer_return_to_status)
+          #if HAS_MARLINUI_MENU
+            if (card.flag.abort_sd_printing || card.isPaused() || print_job_timer.isPaused()) {
+              seclect = 2;
+              print_job_timer.stop();           // Card removed while printing or paused
+              card.flag.abort_sd_printing = true;
+              marlin.end_waiting();             // Don't leave the UI waiting for a user click
+              did_pause_print = 0;
+              pause_pending = false;
+              clear_all = start_print_status = false;
+              goto_screen(sd_card_removed);
+            }
+            else if (currentScreen == menu_file_selector) {
+              clear_lcd();
+              refresh();
+            }
+          #elif ENABLED(HAS_WIRED_LCD) || !defer_return_to_status
             return_to_status();
+          #endif
 
         #elif HAS_WIRED_LCD
 

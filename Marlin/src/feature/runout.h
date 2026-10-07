@@ -183,10 +183,22 @@ class TFilamentMonitor : public FilamentMonitorBase {
         SERIAL_ECHOLNPGM(" -> ", extruder, " RUN OUT");
       #endif
 
-      filament_ran_out = true;
-      event_filament_runout(extruder);
-      planner.synchronize();
+      #if FIL_SENSOR_OPTIONAL
+        // A sensor that booted in the "runout" state is treated as absent
+        if (!sensor.state_original) {
+          filament_ran_out = true;
+          event_filament_runout(extruder);
+          planner.synchronize();
+        }
+        sensor.state_original = 0; // One-shot: do not report the same state again
+      #else
+        filament_ran_out = true;
+        event_filament_runout(extruder);
+        planner.synchronize();
+      #endif
     }
+
+    static uint8_t get_state_original() { return sensor.state_original; }
 
     // Reset after a filament runout or upon resuming a job
     static void init_for_restart(const bool onoff=true) {
@@ -216,11 +228,16 @@ class FilamentSensorBase {
     #endif
 
   public:
+    static uint8_t state_original;
+
     static void setup() {
       #define _INIT_RUNOUT_PIN(P,S,U,D) do{ if (ENABLED(U)) SET_INPUT_PULLUP(P); else if (ENABLED(D)) SET_INPUT_PULLDOWN(P); else SET_INPUT(P); }while(0);
       #define  INIT_RUNOUT_PIN(N) _INIT_RUNOUT_PIN(FIL_RUNOUT##N##_PIN, FIL_RUNOUT##N##_STATE, FIL_RUNOUT##N##_PULLUP, FIL_RUNOUT##N##_PULLDOWN);
       REPEAT_1(NUM_RUNOUT_SENSORS, INIT_RUNOUT_PIN)
       #undef INIT_RUNOUT_PIN
+      #if FIL_SENSOR_OPTIONAL
+        state_original = READ(FIL_RUNOUT1_PIN); // Latch the power-up state: LOW means no sensor
+      #endif
 
       #if ENABLED(FILAMENT_SWITCH_AND_MOTION)
         #define INIT_MOTION_PIN(N) _INIT_RUNOUT_PIN(FIL_MOTION##N##_PIN, FIL_MOTION##N##_STATE, FIL_MOTION##N##_PULLUP, FIL_MOTION##N##_PULLDOWN);
@@ -240,8 +257,12 @@ class FilamentSensorBase {
     // Return a bitmask of runout flag states (1 bits always indicates runout)
     static uint8_t poll_runout_states() {
       #define _INVERT_BIT(N) | (FIL_RUNOUT##N##_STATE ? 0 : _BV(N - 1))
-      return poll_runout_pins() ^ uint8_t(0 REPEAT_1(NUM_RUNOUT_SENSORS, _INVERT_BIT));
+      uint8_t states = poll_runout_pins() ^ uint8_t(0 REPEAT_1(NUM_RUNOUT_SENSORS, _INVERT_BIT));
       #undef _INVERT_BIT
+      #if FIL_SENSOR_OPTIONAL
+        if (!state_original) states &= ~_BV(0); // No sensor: never report runout on sensor 1
+      #endif
+      return states;
     }
 
     #if ENABLED(FILAMENT_SWITCH_AND_MOTION)

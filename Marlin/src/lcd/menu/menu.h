@@ -239,6 +239,16 @@ void menu_move();
   void menu_file_selector_usb();
 #endif
 
+// Factory (Anycubic) screens
+void tft_stop_print();
+void tft_pause_print();
+void runout_sensor();
+void sd_card_removed();
+void tft_setTargetHotend();
+void tft_setTargetBed();
+void tft_set_speed();
+void tft_babystep_zoffset();
+
 ////////////////////////////////////////////
 //////// Menu Item Helper Functions ////////
 ////////////////////////////////////////////

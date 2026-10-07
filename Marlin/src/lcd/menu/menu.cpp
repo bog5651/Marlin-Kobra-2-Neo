@@ -31,12 +31,20 @@
 #include "../../module/temperature.h"
 #include "../../gcode/queue.h"
 
+#if HAS_GRAPHICAL_TFT
+  #include "../tft/tft.h"
+#endif
+
 #if HAS_SOUND
   #include "../../libs/buzzer.h"
 #endif
 
 #if ENABLED(BABYSTEP_ZPROBE_OFFSET)
   #include "../../module/probe.h"
+#endif
+
+#if ENABLED(LEVEING_CALIBRATION_MODULE)
+  #include "../../HAL/STM32/autoGetZoffset.h"
 #endif
 
 #if HAS_LEVELING
@@ -408,6 +416,23 @@ bool MarlinUI::update_selection() {
   return selection;
 }
 
+uint8_t MarlinUI::multi_selection; // = 0
+uint8_t MarlinUI::update_multi_selection(const uint8_t num) {
+  if (int16_t(encoderPosition) >= 1) {
+    multi_selection++;
+    if (multi_selection >= num) multi_selection = num;
+    encoderPosition = 0;
+  }
+  else if (int16_t(encoderPosition) <= -1) {
+    if (multi_selection == 0)
+      multi_selection = 0;
+    else
+      multi_selection--;
+    encoderPosition = 0;
+  }
+  return multi_selection;
+}
+
 void MenuItem_confirm::select_screen(
   FSTR_P const yes, FSTR_P const no,
   selectFunc_t yesFunc, selectFunc_t noFunc,
@@ -417,11 +442,352 @@ void MenuItem_confirm::select_screen(
   const bool ui_selection = !yes ? false : !no || ui.update_selection(),
              got_click = ui.use_click();
   if (got_click || ui.should_draw()) {
+    ui.last_confirm_windown_enabled = ui.confirm_windown_enabled;
+    ui.confirm_windown_enabled = true;
     draw_select_screen(yes, no, ui_selection, fpre, string, fsuf);
     if (got_click) {
-      selectFunc_t callFunc = ui_selection ? yesFunc : noFunc;
-      if (callFunc) callFunc(); else ui.goto_previous_screen();
+      ui.confirm_windown_enabled = false;
+      selectFunc_t callFunc = !ui_selection ? yesFunc : noFunc; // Factory: the encoder selects Cancel first
+      if (callFunc) callFunc();
+      else { ui.goto_previous_screen(); ui.previous_callbackFunc(); }
     }
+  }
+}
+
+// Factory (Anycubic) screens
+
+void tft_stop_print() {
+  ui.defer_status_screen();
+  const bool ui_selection = ui.update_selection(), got_click = ui.use_click();
+  if (got_click || ui.should_draw()) {
+    ui.last_confirm_windown_enabled = ui.confirm_windown_enabled;
+    ui.confirm_windown_enabled = true;
+    MenuItem_confirm::draw_select_screen(
+      GET_TEXT_F(MSG_BUTTON_STOP), GET_TEXT_F(MSG_BACK),
+      ui_selection,
+      GET_TEXT_F(MSG_STOP_PRINT), (const char *)nullptr, nullptr
+    );
+    if (got_click) {
+      ui.confirm_windown_enabled = false;
+      selectFunc_t callFunc = !ui_selection ? ui.abort_print : ui.return_to_status;
+      if (callFunc) callFunc();
+      else ui.goto_previous_screen();
+    }
+  }
+}
+
+void tft_pause_print() {
+  ui.defer_status_screen();
+  const bool ui_selection = ui.update_selection(), got_click = ui.use_click();
+  if (got_click || ui.should_draw()) {
+    ui.last_confirm_windown_enabled = ui.confirm_windown_enabled;
+    ui.confirm_windown_enabled = true;
+    MenuItem_confirm::draw_select_screen(
+      GET_TEXT_F(MSG_BUTTON_STOP), GET_TEXT_F(MSG_BACK),
+      ui_selection,
+      GET_TEXT_F(MSG_PAUSE_PRINT), (const char *)nullptr, nullptr
+    );
+    if (got_click) {
+      ui.confirm_windown_enabled = false;
+      ui.return_to_status();                     // Leave the dialog so it cannot re-queue commands
+      if (!ui_selection) {                       // First button pressed
+        if (marlin.wait_for_user || marlin.printingIsPaused() || did_pause_print)
+          ui.resume_print();                     // Already paused or waiting: continue the print
+        else if (!ui.pause_pending)
+          ui.pause_print();                      // Otherwise request a pause
+      }
+    }
+  }
+}
+
+void runout_sensor() {
+  if (ui.use_click())
+    return ui.return_to_status();
+
+  if (ui.should_draw()) {
+    tft.canvas(18, 81, 284, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT_F(MSG_RUNOUT_SENSOR));
+    tft.add_text(tft_string.center(284), 5, COLOR_WHITE, tft_string);
+
+    tft.canvas(105, 136, 110, 44);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgConfirm, COLOR_BLUE);
+  }
+}
+
+void sd_card_removed() {
+  if (ui.use_click()) {
+    ui.start_print_status = false;
+    ui.print_task_done = false;
+    marlin.end_waiting();
+    did_pause_print = 0;
+    return ui.return_to_status();
+  }
+
+  if (ui.should_draw()) {
+    ui.flexible_clear_lcd(0, 0, 50, TFT_HEIGHT);
+    tft.canvas(18, 52, 284, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT_F(MSG_TF_CARD_REMOVED));
+    tft.add_text(tft_string.center(284), tft_string.center(32), COLOR_WHITE, tft_string);
+
+    tft.canvas(105, 136, 110, 104);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgConfirm, COLOR_BLUE);
+  }
+}
+
+// Factory (Anycubic) edit screens for the status screen tiles
+
+void draw_zoffset_select_screen(uint16_t back_color, uint16_t upcolor, uint16_t downcolor, float zoffset, uint16_t selection) {
+  if (selection) {
+    ui.fresh_flag = false;
+    tft.canvas(124, 26, 100, 20);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT_F(MSG_UBL_Z_OFFSET));
+    tft.add_text(0, 0, COLOR_WHITE, tft_string);
+
+    tft.canvas(34, 74, 136, 136);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgZoffsetTip, COLOR_GREY);
+    tft.add_image(0, 90, imgZoffsetTip1, 0x07FE);
+  }
+
+  tft.canvas(22, 22, 40, 40);
+  tft.set_background(COLOR_BACKGROUND);
+  tft.add_image(0, 0, imgBack, back_color);
+
+  tft.canvas(224, 63, 62, 56);
+  tft.set_background(COLOR_BACKGROUND);
+  tft.add_image(0, 0, imgUp, upcolor);
+
+  tft.canvas(216, 129, 78, 32);
+  tft.set_background(COLOR_BACKGROUND);
+  tft_string.set(ftostr42_52(zoffset));
+  tft_string.add("mm");
+  tft.add_text(tft_string.center(78), tft_string.center(32), COLOR_WHITE, tft_string);
+
+  tft.canvas(224, 170, 62, 56);
+  tft.set_background(COLOR_BACKGROUND);
+  tft.add_image(0, 0, imgDown, downcolor);
+}
+
+#if ENABLED(BABYSTEP_ZPROBE_OFFSET)
+
+  void tft_babystep_zoffset() {
+    const uint8_t selection = ui.update_multi_selection(3 - 1);
+    const bool got_click = ui.use_click();
+    uint16_t back_color = COLOR_GREY, up_color = COLOR_GREY, down_color = COLOR_GREY;
+    static int16_t direction;
+
+    ui.defer_status_screen();
+
+    if (got_click || ui.should_draw()) {
+      switch (selection) {
+        case 0:
+          back_color = COLOR_WHITE;
+          up_color = down_color = COLOR_GREY;
+          break;
+        case 1: // UP
+          up_color = COLOR_WHITE;
+          back_color = down_color = COLOR_GREY;
+          direction = 1;
+          break;
+        case 2: // DOWN
+          down_color = COLOR_WHITE;
+          back_color = up_color = COLOR_GREY;
+          direction = -1;
+          break;
+      }
+      if (got_click) {
+        if (selection) {
+          const float zoffset = ui.getzoffset();
+          const int16_t babystep_increment = direction * BABYSTEP_SIZE_Z;
+          float diff = planner.mm_per_step[Z_AXIS] * babystep_increment;
+          float new_probe_offset = zoffset + diff;
+
+          if (new_probe_offset < PROBE_OFFSET_ZMIN) new_probe_offset = PROBE_OFFSET_ZMIN;
+          if (new_probe_offset > PROBE_OFFSET_ZMAX) new_probe_offset = PROBE_OFFSET_ZMAX;
+          if (WITHIN(new_probe_offset, PROBE_OFFSET_ZMIN, PROBE_OFFSET_ZMAX)) {
+            babystep.add_steps(Z_AXIS, babystep_increment);
+            ui.setzoffset(new_probe_offset);
+          }
+        }
+        else {
+          #if ENABLED(LEVEING_CALIBRATION_MODULE)
+            if (planner.leveling_active) {
+              autoProbe.calibration_positon.z += ui.getzoffset() - ui.temp_probe_zoffset;
+              autoProbe.need_save_data = true;
+            }
+          #endif
+          ui.goto_previous_screen();
+          ui.clear_all = false;
+          if (ui.temp_probe_zoffset != ui.getzoffset())
+            queue.inject("M500");
+          return;
+        }
+      }
+      draw_zoffset_select_screen(back_color, up_color, down_color, ui.getzoffset(), ui.fresh_flag);
+    }
+  }
+
+#endif // BABYSTEP_ZPROBE_OFFSET
+
+void draw_edit_temp_screen(FSTR_P const fstr, uint16_t maxlimit, uint16_t tempdata) {
+  tft.canvas(0, 20, TFT_WIDTH, 32);
+  tft.set_background(COLOR_BACKGROUND);
+  tft_string.set(fstr);
+  tft.add_text(tft_string.center(TFT_WIDTH), 0, COLOR_WHITE, tft_string);
+
+  tft.canvas(131, 83, 58, 31);
+  tft.set_background(COLOR_BACKGROUND);
+  tft_string.set(i16tostr3rj(tempdata));
+  tft_string.add(GET_TEXT_F(MSG_TEMP_UINT));
+  tft.add_text(tft_string.center(58), tft_string.center(31), COLOR_WHITE, tft_string);
+
+  tft.canvas(10, 131, 36, 36);
+  tft.set_background(COLOR_BACKGROUND);
+  tft.add_image(0, 0, imgLeftRound, COLOR_WHITE);
+
+  tft.canvas(274, 131, 36, 36);
+  tft.set_background(COLOR_BACKGROUND);
+  tft.add_image(0, 0, imgRightRound, COLOR_WHITE);
+
+  #define SLIDER_LENGTH 208
+  tft.canvas(56, 141, SLIDER_LENGTH, 16);
+  tft.set_background(COLOR_SLIDER_INACTIVE);
+  tft.add_rectangle(0, 0, SLIDER_LENGTH, 16, COLOR_SLIDER_INACTIVE);
+  tft.add_bar(1, 1, ((SLIDER_LENGTH - 2) * tempdata) / maxlimit, 14, COLOR_BLUE);
+  #undef SLIDER_LENGTH
+}
+
+void tft_setTargetHotend() {
+  static int16_t target_temp_data;
+  static bool fresh_flag;
+
+  ui.defer_status_screen();
+  if (ui.use_click()) {
+    ui.enable_encoder_multiplier(false);
+    fresh_flag = false;
+    ui.clear_all = false;
+    thermalManager.temp_hotend[0].target = target_temp_data;
+    return ui.goto_previous_screen_no_defer();
+  }
+
+  if (!fresh_flag) {
+    ui.enable_encoder_multiplier(true);
+    fresh_flag = true;
+    target_temp_data = thermalManager.temp_hotend[0].target;
+  }
+
+  if (ui.encoderPosition) {
+    target_temp_data += ui.encoderPosition;
+    ui.encoderPosition = 0;
+    if (marlin.printingIsActive())
+      LIMIT(target_temp_data, 170, thermalManager.hotend_max_target(0));
+    else
+      LIMIT(target_temp_data, 0, thermalManager.hotend_max_target(0));
+  }
+
+  if (ui.should_draw())
+    draw_edit_temp_screen(GET_TEXT_F(MSG_UBL_HOTEND_TEMP_CUSTOM), thermalManager.hotend_max_target(0), target_temp_data);
+}
+
+void tft_setTargetBed() {
+  static int16_t target_temp_data;
+  static bool fresh_flag;
+
+  ui.defer_status_screen();
+  if (ui.use_click()) {
+    ui.enable_encoder_multiplier(false);
+    fresh_flag = false;
+    ui.clear_all = false;
+    thermalManager.temp_bed.target = target_temp_data;
+    return ui.goto_previous_screen_no_defer();
+  }
+
+  if (!fresh_flag) {
+    ui.enable_encoder_multiplier(true);
+    fresh_flag = true;
+    target_temp_data = thermalManager.temp_bed.target;
+  }
+
+  if (ui.encoderPosition) {
+    target_temp_data += ui.encoderPosition;
+    ui.encoderPosition = 0;
+    LIMIT(target_temp_data, 0, BED_MAX_TARGET);
+  }
+
+  if (ui.should_draw())
+    draw_edit_temp_screen(GET_TEXT_F(MSG_UBL_BED_TEMP_CUSTOM), BED_MAX_TARGET, target_temp_data);
+}
+
+void tft_set_speed() {
+  static uint16_t change = 1;
+  static bool fresh_flag;
+  static int16_t temp_feedrate_percentage = 100;
+
+  if (ui.use_click()) {
+    fresh_flag = false;
+    ui.clear_all = false;
+    motion.feedrate_percentage = temp_feedrate_percentage;
+    return ui.goto_previous_screen_no_defer();
+  }
+
+  if (!fresh_flag) {
+    fresh_flag = true;
+    temp_feedrate_percentage = motion.feedrate_percentage;
+    LIMIT(temp_feedrate_percentage, 80, 120);   // Limit 80..120
+    change = (temp_feedrate_percentage - 80) / 20;
+  }
+
+  if (ui.encoderPosition) {
+    temp_feedrate_percentage = temp_feedrate_percentage + 20 * ui.encoderPosition;
+    ui.encoderPosition = 0;
+    LIMIT(temp_feedrate_percentage, 80, 120);
+    change = (temp_feedrate_percentage - 80) / 20;
+  }
+
+  if (ui.should_draw()) {
+    tft.canvas(0, 20, TFT_WIDTH, 32);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set(GET_TEXT_F(MSG_SPEED));
+    tft.add_text(tft_string.center(TFT_WIDTH), 0, COLOR_WHITE, tft_string);
+
+    #define SPEED_BUTTON_WIDTH 50
+    #define SPEED_BUTTON_HEIGHT 32
+    tft.canvas(30, 83, SPEED_BUTTON_WIDTH, SPEED_BUTTON_HEIGHT);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set("80%");
+    tft.add_text(tft_string.center(SPEED_BUTTON_WIDTH), tft_string.center(SPEED_BUTTON_HEIGHT), COLOR_WHITE, tft_string);
+
+    tft.canvas(134, 83, SPEED_BUTTON_WIDTH, SPEED_BUTTON_HEIGHT);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set("100%");
+    tft.add_text(tft_string.center(SPEED_BUTTON_WIDTH), tft_string.center(SPEED_BUTTON_HEIGHT), COLOR_WHITE, tft_string);
+
+    tft.canvas(244, 83, SPEED_BUTTON_WIDTH, SPEED_BUTTON_HEIGHT);
+    tft.set_background(COLOR_BACKGROUND);
+    tft_string.set("120%");
+    tft.add_text(tft_string.center(SPEED_BUTTON_WIDTH), tft_string.center(SPEED_BUTTON_HEIGHT), COLOR_WHITE, tft_string);
+    #undef SPEED_BUTTON_WIDTH
+    #undef SPEED_BUTTON_HEIGHT
+
+    tft.canvas(10, 131, 36, 36);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgLeftRound, COLOR_WHITE);
+
+    tft.canvas(274, 131, 36, 36);
+    tft.set_background(COLOR_BACKGROUND);
+    tft.add_image(0, 0, imgRightRound, COLOR_WHITE);
+
+    #define SLIDER_LENGTH 208
+    tft.canvas(56, 141, SLIDER_LENGTH, 16);
+    tft.set_background(COLOR_SLIDER_INACTIVE);
+    tft.add_rectangle(0, 0, SLIDER_LENGTH, 16, COLOR_SLIDER_INACTIVE);
+    tft.add_bar(1, 1, ((SLIDER_LENGTH - 2) * change) / 2, 14, COLOR_BLUE);
+    #undef SLIDER_LENGTH
   }
 }
 
