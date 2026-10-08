@@ -265,7 +265,7 @@ public:
   static void back_callbackFunc();
   static void fan_callbackFunc();
   static void pausu_befor_event();
-  static void StatusChange(const char * const msg);
+  static void StatusChange(const char * const msg, const bool persist);
 
   MarlinUI() {
     TERN_(HAS_MARLINUI_MENU, currentScreen = status_screen);

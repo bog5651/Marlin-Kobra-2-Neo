@@ -287,21 +287,15 @@ bool load_filament(const float slow_load_length/*=0*/, const float fast_load_len
 
       #if M600_PURGE_MORE_RESUMABLE
         if (show_lcd) {
-          // Show "Purge More" / "Resume" menu and wait for reply
+          // Factory: the stock UI has no "Purge More" screen, so purge once and continue.
           KEEPALIVE_STATE(PAUSED_FOR_USER);
           marlin.user_resume();
-          pause_menu_response = PAUSE_RESPONSE_WAIT_FOR;
-          #if ANY(HAS_MARLINUI_MENU, EXTENSIBLE_UI)
-            ui.pause_show_message(PAUSE_MESSAGE_OPTION); // MarlinUI and MKS UI also set PAUSE_RESPONSE_WAIT_FOR
-          #else
-            TERN_(SOVOL_SV06_RTS, rts.gotoPage(ID_PurgeMore_L, ID_PurgeMore_D));
-          #endif
-          while (pause_menu_response == PAUSE_RESPONSE_WAIT_FOR) marlin.idle_no_sleep();
+          pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT;
         }
       #endif
 
       // Keep looping if "Purge More" was selected
-    } while (TERN0(M600_PURGE_MORE_RESUMABLE, pause_menu_response == PAUSE_RESPONSE_EXTRUDE_MORE));
+    } while (0);
 
   #endif
 

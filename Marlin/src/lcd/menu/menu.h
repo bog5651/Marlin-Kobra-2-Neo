@@ -99,7 +99,10 @@ class MenuItem_back : public MenuItemBase {
       _draw(sel, row, ftpl, LCD_STR_UPLEVEL[0], LCD_STR_UPLEVEL[0]);
     }
     // Back Item action goes back one step in history
-    FORCE_INLINE static void action(FSTR_P const=nullptr) { ui.go_back(); }
+    FORCE_INLINE static void action(FSTR_P const=nullptr) {
+      ui.back_callbackFunc(); // Factory: reset jog/calibration leftovers on Back
+      ui.go_back();
+    }
 };
 
 // CONFIRM_ITEM(LABEL,Y,N,FY,FN,...),

@@ -849,9 +849,13 @@ void Probing_Failed() {
   }
 }
 
-// React to special status strings set by G28/G29 and the calibration module
-void MarlinUI::StatusChange(const char * const msg) {
-  if (strncmp_P(msg, "Probing Failed", strlen_P("Probing Failed")) == 0) {
+// React to special status strings set by G28/G29 and the calibration module.
+// Only firmware statuses (persist == false) trigger screens, so a host cannot
+// open a modal screen with M117 (which sets a persistent status).
+void MarlinUI::StatusChange(const char * const msg, const bool persist) {
+  if (persist) return;
+
+  if (strcmp_P(msg, GET_TEXT(MSG_LCD_PROBING_FAILED)) == 0) {
     lcdLeveingstate = LEVEING_NONE;
     motion.soft_endstop._enabled = false;
     calibration_state = false;
@@ -880,7 +884,7 @@ void MarlinUI::StatusChange(const char * const msg) {
       if (should_draw()) MenuItem_static::draw(3, GET_TEXT_F(MSG_HOMING));
     });
   }
-  else if (strncmp_P(msg, "HomingDone", strlen_P("HomingStart")) == 0) {
+  else if (strncmp_P(msg, "HomingDone", strlen_P("HomingDone")) == 0) {
     if (calibration_state || lcdLeveingstate || start_print_status) return;
     clear_all = false;
     goto_previous_screen();
@@ -923,11 +927,19 @@ void draw_edit_move_axis_screen(FSTR_P const fstr, int8_t axis, const char * con
   tft.add_text(tft_string.center(100), tft_string.center(31), COLOR_WHITE, tft_string);
 
   #define SLIDER_LENGTH 208
-  LIMIT(pos, 0, Y_BED_SIZE);
+  const int16_t axis_max =
+    #if HAS_X_AXIS
+      axis == X_AXIS ? int16_t(X_BED_SIZE) :
+    #endif
+    #if HAS_Y_AXIS
+      axis == Y_AXIS ? int16_t(Y_BED_SIZE) :
+    #endif
+    int16_t(Z_MAX_POS);
+  LIMIT(pos, 0, axis_max);
   tft.canvas(56, 141, SLIDER_LENGTH, 16);
   tft.set_background(COLOR_SLIDER_INACTIVE);
   tft.add_rectangle(0, 0, SLIDER_LENGTH, 16, COLOR_SLIDER_INACTIVE);
-  tft.add_bar(1, 1, ((SLIDER_LENGTH - 2) * (int16_t)pos) / Y_BED_SIZE, 14, COLOR_BLUE);
+  tft.add_bar(1, 1, ((SLIDER_LENGTH - 2) * (int16_t)pos) / axis_max, 14, COLOR_BLUE);
   #undef SLIDER_LENGTH
 }
 

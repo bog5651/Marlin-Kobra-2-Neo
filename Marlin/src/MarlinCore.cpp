@@ -383,6 +383,9 @@ void Marlin::startOrResumeJob() {
     TERN_(HAS_PRUSA_MMU3, MMU3::operation_statistics.reset_per_print_stats());
   }
   print_job_timer.start();
+  #if ALL(HAS_FILAMENT_SENSOR, FIL_SENSOR_OPTIONAL)
+    runout.baseline_runout_state(); // Baseline the optional sensor while filament is present
+  #endif
 }
 
 #if HAS_MEDIA

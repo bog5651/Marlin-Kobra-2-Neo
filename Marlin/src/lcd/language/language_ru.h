@@ -920,10 +920,12 @@ namespace Language_ru {
   LSTR MSG_MODULE_PROBE_FAILD             = _UxGT("Сбой калибровки");
   LSTR MSG_READ_CARD_ERROR                = _UxGT("Ошибка чтения карты");
   LSTR MSG_POWER_OUTAGE                   = _UxGT("Сбой питания");
-  LSTR MSG_HOMING_START                   = _UxGT("Начало парковки");
-  LSTR MSG_HOMING_DONE                    = _UxGT("Парковка завершена");
-  LSTR MSG_CALIBRATION_START              = _UxGT("Начало калибровки");
-  LSTR MSG_CALIBRATION_DONE               = _UxGT("Калибровка завершена");
+  // Control tokens matched by MarlinUI::StatusChange: keep them in English in
+  // every language, otherwise the factory screens do not trigger.
+  LSTR MSG_HOMING_START                   = _UxGT("HomingStart");
+  LSTR MSG_HOMING_DONE                    = _UxGT("HomingDone");
+  LSTR MSG_CALIBRATION_START              = _UxGT("CalibrationStart");
+  LSTR MSG_CALIBRATION_DONE               = _UxGT("CalibrationDone");
 
   // Upstream strings that had no RU translation (factory wording)
   LSTR MSG_BACKLASH_N                     = _UxGT("@");

@@ -753,10 +753,12 @@ void MarlinUI::init() {
           case 2: // SD / Pause / Resume
             if (busy || Paused) {
               if (marlin.wait_for_user || Paused || did_pause_print) {
-                if (READ(FIL_RUNOUT_PIN) != runout.get_state_original())
-                  return goto_screen(runout_sensor);
+                #if HAS_FILAMENT_SENSOR
+                  if (READ(FIL_RUNOUT_PIN) != runout.get_state_original())
+                    return goto_screen(runout_sensor);
+                  runout.filament_ran_out = false;
+                #endif
                 clear_all = false;
-                runout.filament_ran_out = false;
                 resume_print();                 // Clear the wait and continue the print
               }
               else if (!pause_pending)
@@ -1884,7 +1886,7 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
 
     TERN_(STATUS_MESSAGE_SCROLLING, reset_status_scroll());
 
-    TERN_(HAS_MARLINUI_MENU, StatusChange(status_message)); // Factory: react to HomingStart/HomingDone/Calibration* strings
+    TERN_(HAS_MARLINUI_MENU, StatusChange(status_message, persist)); // Factory: react to HomingStart/HomingDone/Calibration* strings
     TERN_(EXTENSIBLE_UI, ExtUI::onStatusChanged(status_message));
     TERN_(DWIN_CREALITY_LCD, dwinStatusChanged(status_message));
     TERN_(DWIN_CREALITY_LCD_JYERSUI, jyersDWIN.updateStatus(status_message));
@@ -1943,7 +1945,10 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
       marlin.end_waiting();
       queue.clear();                        // Drop stale M25/M24 so a blocked M125 cannot re-enter M125
       did_pause_print = 0;
-      runout.filament_ran_out = false;
+      #if HAS_FILAMENT_SENSOR
+        runout.filament_ran_out = false;
+      #endif
+      print_task_done = false;
       clear_all = start_print_status = false;
       seclect = 2;                          // Leave the preheat slot disarmed
       thermalManager.disable_all_heaters(); // Heat off now, even if loop() is currently blocked
@@ -2195,8 +2200,14 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
 #if HAS_MARLINUI_MENU
 
   void MarlinUI::reset_settings() {
+    set_language(0);
     settings.reset();
+    #if ENABLED(LEVEING_CALIBRATION_MODULE)
+      autoProbe.clean();
+    #endif
+    settings.save();
     completion_feedback();
+    return_to_status();
     #if ENABLED(TOUCH_SCREEN_CALIBRATION)
       if (touch_calibration.need_calibration()) goto_screen(touch_screen_calibration);
     #endif

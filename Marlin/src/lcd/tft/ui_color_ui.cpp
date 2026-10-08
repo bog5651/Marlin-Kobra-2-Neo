@@ -169,7 +169,7 @@ void draw_heater_status(uint16_t x, uint16_t y, const int8_t heater, const bool 
   tft.add_image(31, 1, image, COLOR_WHITE);
 
   char str_buf[16];
-  sprintf(str_buf, "%u/%u", (uint16_t)currentTemperature, (uint16_t)targetTemperature);
+  sprintf(str_buf, "%u/%u", (uint16_t)currentTemperature, (uint16_t)_MAX(0, targetTemperature));
   tft_string.set(str_buf);
   tft_string.trim();
   tft.add_text(tft_string.center(92), 42, COLOR_WHITE, tft_string);

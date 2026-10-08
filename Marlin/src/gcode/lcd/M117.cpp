@@ -26,7 +26,6 @@
 
 #include "../gcode.h"
 #include "../../lcd/marlinui.h"
-#include "../../module/printcounter.h"
 
 /**
  * M117: Set LCD Status Message
@@ -38,10 +37,10 @@ void GcodeSuite::M117() {
   else
     ui.reset_status();
 
-  // Factory: a status message restarts the print timer and marks it as UI-driven
+  // Factory: a status message switches the status screen to the elapsed timer.
+  // The timer itself is started by M24/startOrResumeJob(); resetting it here
+  // would zero the elapsed time and bump the print statistics on every message.
   ui.real_duration();
-  print_job_timer.reset();
-  print_job_timer.start();
 }
 
 #endif // HAS_STATUS_MESSAGE
