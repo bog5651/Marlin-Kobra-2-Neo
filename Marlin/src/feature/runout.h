@@ -40,7 +40,7 @@
 
 //#define FILAMENT_RUNOUT_SENSOR_DEBUG
 #ifndef FILAMENT_RUNOUT_THRESHOLD
-  #define FILAMENT_RUNOUT_THRESHOLD 5
+  #define FILAMENT_RUNOUT_THRESHOLD 4000 // Factory: debounce an optional/loose sensor against glitches
 #endif
 
 #if ENABLED(FILAMENT_MOTION_SENSOR)
@@ -184,10 +184,10 @@ class TFilamentMonitor : public FilamentMonitorBase {
       #endif
 
       #if ENABLED(FIL_SENSOR_OPTIONAL)
-        // Optional sensor: state_original is the "filament present" pin level
-        // (LOW on this hardware, the level the stock firmware normalises to).
-        // Suppress the event while the baseline still says "no filament"
-        // (a print started without filament), then self-heal to the present level.
+        // Optional sensor: state_original holds the "filament present" pin
+        // level. Fire the event only while the baseline is that present level;
+        // if the machine started "out" (baseline HIGH) swallow the first change
+        // and normalise the baseline to the present (LOW) level.
         if (!sensor.state_original) {
           filament_ran_out = true;
           event_filament_runout(extruder);
@@ -204,14 +204,12 @@ class TFilamentMonitor : public FilamentMonitorBase {
     static uint8_t get_state_original() { return sensor.state_original; }
 
     #if ENABLED(FIL_SENSOR_OPTIONAL)
-      // Re-baseline the optional sensor while filament is present. Called when
-      // a print starts/resumes so that loading filament after power-on does not
-      // look like a runout and cannot strand the resume screen.
-      // On this hardware the pin sits at FIL_RUNOUT1_STATE while filament is
-      // loaded (the level the stock firmware normalises state_original to).
+      // Optional sensor: re-latch the baseline to the current pin level when a
+      // print starts/resumes. The sensor may be absent or unplugged, so what the
+      // pin reads at job start counts as "normal" and only a later change is a
+      // runout. Called from Marlin::startOrResumeJob().
       static void baseline_runout_state() {
-        const bool pin_state = READ(FIL_RUNOUT1_PIN);
-        if (pin_state == bool(FIL_RUNOUT1_STATE)) sensor.state_original = pin_state;
+        sensor.state_original = READ(FIL_RUNOUT1_PIN);
       }
     #endif
 
@@ -250,8 +248,8 @@ class FilamentSensorBase {
       #define  INIT_RUNOUT_PIN(N) _INIT_RUNOUT_PIN(FIL_RUNOUT##N##_PIN, FIL_RUNOUT##N##_STATE, FIL_RUNOUT##N##_PULLUP, FIL_RUNOUT##N##_PULLDOWN);
       REPEAT_1(NUM_RUNOUT_SENSORS, INIT_RUNOUT_PIN)
       #undef INIT_RUNOUT_PIN
-      #if FIL_SENSOR_OPTIONAL
-        state_original = READ(FIL_RUNOUT1_PIN); // Latch the power-up state: LOW means no sensor
+      #if ENABLED(FIL_SENSOR_OPTIONAL)
+        state_original = READ(FIL_RUNOUT1_PIN); // Latch the power-up state: HIGH means no filament and no sensor
       #endif
 
       #if ENABLED(FILAMENT_SWITCH_AND_MOTION)
@@ -570,8 +568,8 @@ class FilamentSensorBase {
 
   class RunoutResponseDebounced {
     private:
-      static constexpr int8_t runout_threshold = FILAMENT_RUNOUT_THRESHOLD;
-      static int8_t runout_count[NUM_RUNOUT_SENSORS];
+      static constexpr int16_t runout_threshold = FILAMENT_RUNOUT_THRESHOLD;
+      static int16_t runout_count[NUM_RUNOUT_SENSORS];
 
     public:
       static void reset() {

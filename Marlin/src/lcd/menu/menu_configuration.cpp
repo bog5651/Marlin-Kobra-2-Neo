@@ -736,6 +736,14 @@ void menu_configuration() {
     EDIT_ITEM(bool, MSG_FAN_SPEED, &ui.model_fan_enabled, ui.fan_callbackFunc);
   #endif
 
+  // The runout sensor is optional: allow disabling it from the panel (the
+  // factory had this toggle only in the pause options screen, which the
+  // factory UI replaced; without it an absent/unplugged sensor can trap the
+  // resume flow on the runout screen).
+  #if HAS_FILAMENT_SENSOR
+    EDIT_ITEM(bool, MSG_RUNOUT_SENSOR, &runout.enabled, runout.reset);
+  #endif
+
   #if HAS_MULTI_LANGUAGE
     SUBMENU(LANGUAGE_CHOOSE, menu_language);
   #endif

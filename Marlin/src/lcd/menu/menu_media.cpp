@@ -30,7 +30,9 @@
 
 #include "menu_item.h"
 #include "../../sd/cardreader.h"
-#include "../../feature/runout.h"
+#if HAS_FILAMENT_SENSOR
+  #include "../../feature/runout.h"
+#endif
 
 #if ENABLED(POWER_LOSS_RECOVERY)
   #include "../../feature/powerloss.h"
