@@ -185,15 +185,16 @@ class TFilamentMonitor : public FilamentMonitorBase {
 
       #if ENABLED(FIL_SENSOR_OPTIONAL)
         // Optional sensor: state_original holds the "filament present" pin
-        // level. Fire the event only while the baseline is that present level;
-        // if the machine started "out" (baseline HIGH) swallow the first change
-        // and normalise the baseline to the present (LOW) level.
-        if (!sensor.state_original) {
+        // level, i.e. !FIL_RUNOUT1_STATE (FIL_RUNOUT_STATE documents the level
+        // meaning "no filament"). Fire the event only while the baseline is
+        // that present level; if the machine started "out" (baseline at the
+        // absent level) swallow the first change and normalise the baseline.
+        if (sensor.state_original != bool(FIL_RUNOUT1_STATE)) {
           filament_ran_out = true;
           event_filament_runout(extruder);
           planner.synchronize();
         }
-        sensor.state_original = 0;
+        sensor.state_original = !bool(FIL_RUNOUT1_STATE);
       #else
         filament_ran_out = true;
         event_filament_runout(extruder);
