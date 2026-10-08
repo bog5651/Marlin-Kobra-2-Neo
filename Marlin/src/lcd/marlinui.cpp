@@ -754,7 +754,7 @@ void MarlinUI::init() {
             if (busy || Paused) {
               if (marlin.wait_for_user || Paused || did_pause_print) {
                 #if HAS_FILAMENT_SENSOR
-                  if (READ(FIL_RUNOUT_PIN) != runout.get_state_original())
+                  if (runout.enabled && READ(FIL_RUNOUT_PIN) != runout.get_state_original())
                     return goto_screen(runout_sensor);
                   runout.filament_ran_out = false;
                 #endif
@@ -2200,7 +2200,7 @@ uint8_t expand_u8str_P(char * const outstr, PGM_P const ptpl, const int8_t ind, 
 #if HAS_MARLINUI_MENU
 
   void MarlinUI::reset_settings() {
-    set_language(0);
+    TERN_(HAS_MULTI_LANGUAGE, set_language(0));
     settings.reset();
     #if ENABLED(LEVEING_CALIBRATION_MODULE)
       autoProbe.clean();

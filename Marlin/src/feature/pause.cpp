@@ -290,12 +290,10 @@ bool load_filament(const float slow_load_length/*=0*/, const float fast_load_len
           // Factory: the stock UI has no "Purge More" screen, so purge once and continue.
           KEEPALIVE_STATE(PAUSED_FOR_USER);
           marlin.user_resume();
-          pause_menu_response = PAUSE_RESPONSE_RESUME_PRINT;
         }
       #endif
 
-      // Keep looping if "Purge More" was selected
-    } while (0);
+    } while (0); // One purge cycle: "Purge More" is intentionally not implemented
 
   #endif
 

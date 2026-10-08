@@ -72,7 +72,9 @@ inline void sdcard_start_selected_file() {
   #endif
   motion.feedrate_percentage = 100;
   ui.real_duration_state = false;
-  runout.filament_ran_out = false; // Clear status each time you print
+  #if HAS_FILAMENT_SENSOR
+    runout.filament_ran_out = false; // Clear status each time you print
+  #endif
   ui.start_print_status = true;
   ui.pause_pending = false;
   card.openAndPrintFile(card.filename);

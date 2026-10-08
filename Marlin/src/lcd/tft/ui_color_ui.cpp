@@ -208,7 +208,8 @@ void MarlinUI::draw_status_screen() {
     if (progress)
       tft.add_bar(1, 1, ((222 - 2) * progress / PROGRESS_SCALE) / 100, 4, COLOR_PROGRESS_BAR);
 
-    // Print duration
+    // Print duration (factory: the elapsed time appears after the slicer's
+    // first M117, which switches the tile to the real-duration timer)
     char buffer[14] = {0};
     if ((card.isPrinting() || did_pause_print) && get_real_duration()) {
       duration_t elapsed = print_job_timer.duration();

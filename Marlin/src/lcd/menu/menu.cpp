@@ -823,6 +823,7 @@ void printinf_finish() {
 void Probing_Failed() {
   if (ui.use_click()) {
     ui.clear_all = false;
+    motion.soft_endstop._enabled = true; // The failure path left them off
     #if ENABLED(LEVEING_CALIBRATION_MODULE)
       autoProbe.LeveingFailSattue = false;
     #endif
@@ -853,6 +854,7 @@ void Probing_Failed() {
 // Only firmware statuses (persist == false) trigger screens, so a host cannot
 // open a modal screen with M117 (which sets a persistent status).
 void MarlinUI::StatusChange(const char * const msg, const bool persist) {
+  reset_alert_level(); // Factory: an active alert must not block later factory screens
   if (persist) return;
 
   if (strcmp_P(msg, GET_TEXT(MSG_LCD_PROBING_FAILED)) == 0) {
@@ -863,20 +865,20 @@ void MarlinUI::StatusChange(const char * const msg, const bool persist) {
     clear_all = true;
     goto_screen(Probing_Failed);
   }
-  else if (strncmp_P(msg, "CalibrationStart", strlen_P("CalibrationStart")) == 0) {
+  else if (strcmp_P(msg, GET_TEXT(MSG_CALIBRATION_START)) == 0) {
     push_current_screen();
     clear_all = true;
     goto_screen([]{
       if (should_draw()) MenuItem_static::draw(3, GET_TEXT_F(MSG_POSITION_CALIBRATION), 1, "...");
     });
   }
-  else if (strncmp_P(msg, "CalibrationDone", strlen_P("CalibrationDone")) == 0) {
+  else if (strcmp_P(msg, GET_TEXT(MSG_CALIBRATION_DONE)) == 0) {
     calibration_state = false; // Do not show the homing tip
     clear_all = false;
     goto_previous_screen();
     previous_callbackFunc();
   }
-  else if (strncmp_P(msg, "HomingStart", strlen_P("HomingStart")) == 0) {
+  else if (strcmp_P(msg, GET_TEXT(MSG_HOMING_START)) == 0) {
     if (calibration_state || lcdLeveingstate || start_print_status) return;
     push_current_screen();
     clear_all = true;
@@ -884,7 +886,7 @@ void MarlinUI::StatusChange(const char * const msg, const bool persist) {
       if (should_draw()) MenuItem_static::draw(3, GET_TEXT_F(MSG_HOMING));
     });
   }
-  else if (strncmp_P(msg, "HomingDone", strlen_P("HomingDone")) == 0) {
+  else if (strcmp_P(msg, GET_TEXT(MSG_HOMING_DONE)) == 0) {
     if (calibration_state || lcdLeveingstate || start_print_status) return;
     clear_all = false;
     goto_previous_screen();
@@ -929,12 +931,15 @@ void draw_edit_move_axis_screen(FSTR_P const fstr, int8_t axis, const char * con
   #define SLIDER_LENGTH 208
   const int16_t axis_max =
     #if HAS_X_AXIS
-      axis == X_AXIS ? int16_t(X_BED_SIZE) :
+      axis == X_AXIS ? _MAX(1, int16_t(X_BED_SIZE)) :
     #endif
     #if HAS_Y_AXIS
-      axis == Y_AXIS ? int16_t(Y_BED_SIZE) :
+      axis == Y_AXIS ? _MAX(1, int16_t(Y_BED_SIZE)) :
     #endif
-    int16_t(Z_MAX_POS);
+    #if HAS_Z_AXIS
+      axis == Z_AXIS ? _MAX(1, int16_t(Z_MAX_POS)) :
+    #endif
+    _MAX(1, int16_t(Z_MAX_POS)); // Never divide by zero for an unexpected axis
   LIMIT(pos, 0, axis_max);
   tft.canvas(56, 141, SLIDER_LENGTH, 16);
   tft.set_background(COLOR_SLIDER_INACTIVE);

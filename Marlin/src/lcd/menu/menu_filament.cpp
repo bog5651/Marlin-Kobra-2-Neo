@@ -329,10 +329,13 @@ void MarlinUI::pause_show_message(
 // Called when a requested pause becomes active (M125)
 void MarlinUI::pausu_befor_event() {
   pause_pending = false; // The requested pause is now active
-  if (runout.filament_ran_out)
-    goto_screen(runout_sensor);
-  else
-    return_to_status();
+  #if HAS_FILAMENT_SENSOR
+    if (runout.filament_ran_out) {
+      goto_screen(runout_sensor);
+      return;
+    }
+  #endif
+  return_to_status();
 }
 
 #endif // HAS_MARLINUI_MENU && ADVANCED_PAUSE_FEATURE

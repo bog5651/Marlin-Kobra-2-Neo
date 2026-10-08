@@ -183,9 +183,22 @@ class TFilamentMonitor : public FilamentMonitorBase {
         SERIAL_ECHOLNPGM(" -> ", extruder, " RUN OUT");
       #endif
 
-      filament_ran_out = true;
-      event_filament_runout(extruder);
-      planner.synchronize();
+      #if ENABLED(FIL_SENSOR_OPTIONAL)
+        // Optional sensor: state_original is the "filament present" pin level
+        // (LOW on this hardware, the level the stock firmware normalises to).
+        // Suppress the event while the baseline still says "no filament"
+        // (a print started without filament), then self-heal to the present level.
+        if (!sensor.state_original) {
+          filament_ran_out = true;
+          event_filament_runout(extruder);
+          planner.synchronize();
+        }
+        sensor.state_original = 0;
+      #else
+        filament_ran_out = true;
+        event_filament_runout(extruder);
+        planner.synchronize();
+      #endif
     }
 
     static uint8_t get_state_original() { return sensor.state_original; }
@@ -194,9 +207,11 @@ class TFilamentMonitor : public FilamentMonitorBase {
       // Re-baseline the optional sensor while filament is present. Called when
       // a print starts/resumes so that loading filament after power-on does not
       // look like a runout and cannot strand the resume screen.
+      // On this hardware the pin sits at FIL_RUNOUT1_STATE while filament is
+      // loaded (the level the stock firmware normalises state_original to).
       static void baseline_runout_state() {
         const bool pin_state = READ(FIL_RUNOUT1_PIN);
-        if (pin_state != bool(FIL_RUNOUT1_STATE)) sensor.state_original = pin_state;
+        if (pin_state == bool(FIL_RUNOUT1_STATE)) sensor.state_original = pin_state;
       }
     #endif
 
@@ -260,9 +275,9 @@ class FilamentSensorBase {
       uint8_t states = poll_runout_pins() ^ uint8_t(0 REPEAT_1(NUM_RUNOUT_SENSORS, _INVERT_BIT));
       #undef _INVERT_BIT
       #if ENABLED(FIL_SENSOR_OPTIONAL)
-        // Optional sensor: the stock firmware reports a runout when the pin
-        // state differs from the power-up state. The UI resume gate compares
-        // READ(FIL_RUNOUT_PIN) with get_state_original() the same way.
+        // Optional sensor: a runout is reported when the pin differs from the
+        // baseline (`state_original`, the "filament present" level). The UI
+        // resume gate compares READ(FIL_RUNOUT_PIN) with it the same way.
         if (READ(FIL_RUNOUT1_PIN) != state_original) states |= _BV(0);
         else states &= ~_BV(0);
       #endif
